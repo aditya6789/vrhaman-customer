@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "1080326665784",
+    "firebase_url": "https://vrhaman-f6289-default-rtdb.firebaseio.com",
+    "project_id": "vrhaman-f6289",
+    "storage_bucket": "vrhaman-f6289.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1080326665784:android:4560485983c736e8c918cd",
+        "android_client_info": {
+          "package_name": "com.example.vrhaman"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCspHZKKykdiODu-OcgSSjB7my_1h42EiY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1080326665784:android:e87c455e5c0ead8ac918cd",
+        "android_client_info": {
+          "package_name": "com.example.vrhaman_vendor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCspHZKKykdiODu-OcgSSjB7my_1h42EiY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
