@@ -13,6 +13,7 @@ import 'package:vrhaman/src/features/home/presentation/pages/bottom_navigation_b
 import 'package:vrhaman/src/features/home/presentation/pages/home_screen.dart';
 import 'package:vrhaman/src/features/auth/presentation/bloc/otp_cubit.dart';
 import 'package:otpless_flutter/otpless_flutter.dart';
+import 'package:vrhaman/src/utils/toast.dart';
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({super.key});
@@ -165,9 +166,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                             setState(() {
                               isButtonEnabled = false;
                               secondsRemaining = 30;
+                              startTimer();
                             });
-                            context.read<ResendCubit>().sendResendOtp(
-                                context.read<LoginCubit>().phoneController.text);
+                               context.read<LoginCubit>().sendOtp(context.read<LoginCubit>().phoneController.text);
+                                    showToast('Resend OTP sent on whatsapp successfully', isSuccess: true);
                           },
                           child: Text(
                             'Resend Code',
@@ -192,17 +194,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         MaterialPageRoute(builder: (context) => CustomNavigationBar()),
                       );
                     } else if (state is OtpValidationFailure) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(state.error),
-                          backgroundColor: Colors.red[400],
-                          behavior: SnackBarBehavior.floating,
-                          margin: EdgeInsets.all(16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
+                      showToast(state.error , isSuccess: false);
                     }
                   },
                   builder: (context, state) {

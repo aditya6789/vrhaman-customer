@@ -30,4 +30,13 @@ class WishlistRepositoryImpl implements WishlistRepository {
       return Left(Failure(e.toString()));
     }
   }
+  @override
+  Future<Either<Failure, void>> deleteWishlist(String vehicleId) async {
+    try {
+      await wishlistDataSource.deleteWishlist(vehicleId);
+      return Right('Wishlist deleted successfully');
+    } catch (e) {
+      return Left(Failure(e.toString()));
+    }
+  }
 }

@@ -6,4 +6,5 @@ import 'package:vrhaman/src/features/wishlist/domain/entities/wishlist.dart';
 abstract interface class WishlistRepository {
   Future<Either<Failure , AddWishlist>> addWishlist(AddWishlist addWishlist);
   Future<Either<Failure , List<Wishlist>>> getWishlist();
+  Future<Either<Failure , void>> deleteWishlist(String vehicleId);
 }

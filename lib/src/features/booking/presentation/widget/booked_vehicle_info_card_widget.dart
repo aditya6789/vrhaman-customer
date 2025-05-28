@@ -3,11 +3,15 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:vrhaman/constants.dart';
 import 'package:vrhaman/src/features/booking/domain/entities/bookingVehicle.dart';
+import 'package:vrhaman/src/features/booking/presentation/cubit/booking_cubit.dart';
 import 'package:vrhaman/src/features/booking/presentation/screens/booking_details_screen.dart';
 import 'package:vrhaman/src/features/booking/presentation/widget/date_widget.dart';
 import 'package:vrhaman/src/features/booking/presentation/widget/time_widget.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:vrhaman/src/utils/api_response.dart';
+import 'package:vrhaman/src/utils/launch_url.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vrhaman/src/utils/toast.dart';
 
 class BookedVehicleInfoCard extends StatefulWidget {
   final BookingVehicle booking;
@@ -19,11 +23,11 @@ class BookedVehicleInfoCard extends StatefulWidget {
 
 class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
   Razorpay _razorpay = Razorpay();
+  int amount = 0;
   
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
@@ -37,8 +41,8 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
   
   void _openRazorpay() async {
     var options = {
-      'key': 'rzp_test_vFZUJc2TH3FqFc',
-      'amount': (widget.booking.totalPrice * 100).toInt(),
+      'key': 'rzp_live_jkdw3rMi0JwTiT',
+      'amount': amount,
       'name': 'Razorpay Inc.',
       'description': 'Thank you for shopping with us!',
       'prefill': {
@@ -57,17 +61,29 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
     }
   }
 
-  Future<void> _onBookingPressed(BuildContext context) async {
+
+  void _onPaymentPressed(BuildContext context) async {
+    print('Payment pressed');
+    if(widget.booking.payment_type== 'partial'){
+      amount = (widget.booking.totalPrice  * 20 / 100 ).toInt() * 100;
+
+    }else{
+      amount = widget.booking.totalPrice.toInt() * 100;
+    }
+    _openRazorpay();
+  }
+
+  Future<void> _onBookingPressed(BuildContext context, String paymentId) async {
     print('Booking pressed');
     try {
-      final res = await patchRequest('booking/${widget.booking.id}', {
-        'status': 'Completed'
+      final res = await patchRequest('booking/payment/${widget.booking.id}', {
+        'booking_id': widget.booking.id,
+        'payment_id': paymentId,
       });
-      if(res.statusCode == 200){
-        showPaymentPopupMessage(context, true, 'Payment Successful!');
-      }else{
-        showPaymentPopupMessage(context, false, 'Payment Failed!');
-      }
+      print('booking payment response ${res}');
+
+      context.read<BookingCubit>().getBookings();
+     
       print('Booking completed');
     } catch (e) {
       print(e);
@@ -78,12 +94,122 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
 
   
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    _onBookingPressed(context, response.paymentId ?? '');
     showPaymentPopupMessage(context, true, 'Payment Successful!');
-    _onBookingPressed(context);
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
     showPaymentPopupMessage(context, false, 'Payment Failed!');
+  }
+
+  void showCancelBookingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.red[50],
+                  ),
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: Colors.red,
+                    size: 32.sp,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  'Cancel Booking',
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Are you sure you want to cancel this booking? This action cannot be undone.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'No, Keep it',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final res = await cancelBooking();
+                          if(res == 'success'){
+                            context.read<BookingCubit>().getBookings();
+                            Navigator.pop(context, true);
+                            showToast( 'Booking cancelled successfully');
+                          }else{
+                            showToast( 'Failed to cancel booking');
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24.w,
+                            vertical: 12.h,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        child: Text(
+                          ' Cancel',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<String> cancelBooking() async{
+    final res = await postRequest('booking/cancel-booking/${widget.booking.id}', {});
+    print('booking cancel response ${res}');
+    if(res.statusCode == 200){
+      return 'success';
+    }else{
+      return 'error';
+    }
   }
 
   
@@ -175,7 +301,7 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
                               fit: StackFit.expand,
                               children: [
                                 Image.network(
-                                  IMAGE_URL + (widget.booking.vehicleImages[0] ?? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtc3-y63KN_r5LwOC9PNqpwc5C1JPeN36_ug&s'),
+                                 (widget.booking.vehicleImages[0] ?? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtc3-y63KN_r5LwOC9PNqpwc5C1JPeN36_ug&s'),
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
@@ -287,7 +413,7 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
                               SizedBox(height: 8.h),
                               _buildInfoRow(
                                 Icons.location_on_outlined,
-                                'New Delhi, India',
+                                widget.booking.pickupAddress,
                               ),
                             ],
                           ),
@@ -312,7 +438,7 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
                       if(widget.booking.status == 'Accepted')
                         Expanded(
                           child: _buildActionButton(
-                            onPressed: _openRazorpay,
+                            onPressed: () => _onPaymentPressed(context),
                             icon: HugeIcons.strokeRoundedMoney01,
                             label: 'Payment',
                             color: primaryColor,
@@ -321,7 +447,9 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
                       if(widget.booking.status == 'Confirmed')
                         Expanded(
                           child: _buildActionButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              launchGoogleMaps(widget.booking.pickupAddress);
+                            },
                             icon: HugeIcons.strokeRoundedNavigation04,
                             label: 'Navigate',
                             color: Colors.green,
@@ -330,7 +458,9 @@ class _BookedVehicleInfoCardState extends State<BookedVehicleInfoCard> {
                       if(widget.booking.status == 'Pending')
                         Expanded(
                           child: _buildActionButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              showCancelBookingDialog(context);
+                            },
                             icon: HugeIcons.strokeRoundedCancel02,
                             label: 'Cancel',
                             color: Colors.red,

@@ -7,6 +7,7 @@ class BookingData {
       final String vendorId;
       final String paymentType;
       final bool isDeliveryAtHome;
+      final String? addressId;
 
       BookingData({
         required this.startDate,
@@ -17,6 +18,7 @@ class BookingData {
         required this.paymentType,
         required this.vendorId, 
         required this.isDeliveryAtHome,
+        this.addressId,
       });
 
 }

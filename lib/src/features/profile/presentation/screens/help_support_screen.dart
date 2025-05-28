@@ -90,8 +90,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     icon: Icons.headset_mic_rounded,
                     title: 'Customer Support',
                     subtitle: '24/7 Dedicated Support',
-                    actionTitle: '9910213793',
-                    onTap: () => _launchPhone('9910213793'),
+                    actionTitle: '8968779413',
+                    onTap: () => _launchPhone('8968779413'),
                     gradient: LinearGradient(
                       colors: [
                         primaryColor,
@@ -107,8 +107,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     icon: Icons.email_rounded,
                     title: 'Email Support',
                     subtitle: 'Response within 24 hours',
-                    actionTitle: 'info@vrhaman.com',
-                    onTap: () => _launchEmail('info@vrhaman.com'),
+                    actionTitle: 'support@vrhaman.com',
+                    onTap: () => _launchEmail('support@vrhaman.com'),
                     gradient: LinearGradient(
                       colors: [
                         Colors.blue,

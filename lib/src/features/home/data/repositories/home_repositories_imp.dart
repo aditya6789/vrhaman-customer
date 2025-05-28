@@ -33,9 +33,9 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
-  Future<Either<Failure, List<Vehicle>>> getUserPreferredVehicles() async {
+  Future<Either<Failure, List<Vehicle>>> getUserPreferredVehicles(String latitude, String longitude) async {
     try {
-      final vehicles = await _remoteDataSource.getUserPreferredVehicles();
+      final vehicles = await _remoteDataSource.getUserPreferredVehicles(latitude, longitude);
       return Right(vehicles.map((model) => model.toEntity()).toList());
     } catch (e) {
       print('Repository User Preferred Error: $e');

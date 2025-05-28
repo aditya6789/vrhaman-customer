@@ -8,7 +8,7 @@ class BrandModel extends Brand {
   });
 
   factory BrandModel.fromJson(Map<String, dynamic> json) {
-    print('BrandModel: $json');
+    // print('BrandModel: $json');
     return BrandModel(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',

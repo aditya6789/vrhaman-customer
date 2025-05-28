@@ -8,6 +8,11 @@ class Vehicle {
   final String? availableDelivery;
   final String? availabilityStatus;
   final Map<String, dynamic>? vehicleDetails;
+  final double? averageRating;
+  final int? seats;
+  final String? fuelType;
+  final int? enginecc;
+
 
   Vehicle({
     required this.id,
@@ -19,6 +24,10 @@ class Vehicle {
     this.availableDelivery,
     this.availabilityStatus,
     this.vehicleDetails,
+    this.averageRating,
+    this.seats,
+    this.fuelType,
+    this.enginecc,
   });
 }
 

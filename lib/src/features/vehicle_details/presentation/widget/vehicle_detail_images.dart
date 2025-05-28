@@ -23,7 +23,7 @@ class VehicleDetailImages extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<String> images = (vehicleModel.images?.isNotEmpty ?? false)
-        ? vehicleModel.images.map((i) => '$IMAGE_URL$i').toList()
+        ? vehicleModel.images.map((i) => '${i}').toList()
         : ['https://images.pexels.com/photos/819805/pexels-photo-819805.jpeg'];
 
     return AspectRatio(

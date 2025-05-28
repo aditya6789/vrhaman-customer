@@ -17,7 +17,9 @@ void showLogout(BuildContext context){
 Spacer(),
         Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: (){}, child: Text("No Return"))),
+            Expanded(child: OutlinedButton(onPressed: (){
+              Navigator.pop(context);
+            }, child: Text("No Return"))),
            SizedBox(width: 10,),
             Expanded(
               child: ElevatedButton(onPressed: () {

@@ -9,7 +9,7 @@ class BookingDataModel extends BookingData {
     required super.vehicleId,
     required super.vendorId,
     required super.isDeliveryAtHome,
-    required super.paymentType
-
+    required super.paymentType,
+    required super.addressId,
   });
 }

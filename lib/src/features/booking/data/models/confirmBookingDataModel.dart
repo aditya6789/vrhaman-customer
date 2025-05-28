@@ -17,6 +17,7 @@ class ConfirmBookingDataModel extends ConfirmBookingData {
     required super.vendorBusinessName,
     // required super.vendorBusinessEmail,
     required super.vendorBusinessAddress,
+    required super.paymentType,
   });
 
   factory ConfirmBookingDataModel.fromJson(Map<String, dynamic> json) {
@@ -36,6 +37,7 @@ class ConfirmBookingDataModel extends ConfirmBookingData {
       vendorBusinessName: json['vendor_id']['business_name'],
       // vendorBusinessEmail: json['vendor_id']['vendor_business_email'],
       vendorBusinessAddress: json['vendor_id']['business_address'],
+      paymentType: json['payment_type'],
     );
   }
 

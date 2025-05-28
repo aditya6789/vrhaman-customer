@@ -113,7 +113,7 @@ class _DocumentScreenState extends State<DocumentScreen> {
                               top: Radius.circular(24.r),
                             ),
                             child: Image.network(
-                              '${IMAGE_URL2}${document![0]['document']}',
+                              '${document![0]['document']}',
                               height: 300.h,
                               width: double.infinity,
                               fit: BoxFit.cover,
@@ -204,7 +204,47 @@ class _DocumentScreenState extends State<DocumentScreen> {
                     SizedBox(height: 32.h),
 
                     // Update Document Button
-                   
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => UploadDocumentScreen(
+                                isEditing: true,
+                                currentDocument: document![0]['document'],
+                              ),
+                            ),
+                          ).then((_) {
+                            // Refresh the document after returning from edit screen
+                            checkdocumentRequest();
+                          });
+                        },
+                        icon: Icon(
+                          HugeIcons.strokeRoundedEdit01,
+                          size: 20.sp,
+                        ),
+                        label: Text(
+                          'Update Document',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
                   ],
                 ),
               ),

@@ -9,7 +9,7 @@ abstract interface class HomeRemoteDataSource {
   Future<List<VehicleModel>> getAllVehicles();
   Future<List<VehicleModel>> getPopularBikes();
   Future<List<VehicleModel>> getPopularCars();
-  Future<List<VehicleModel>> getUserPreferredVehicles();
+  Future<List<VehicleModel>> getUserPreferredVehicles(String latitude, String longitude);
   Future<List<VehicleModel>> getBestDeals();
   Future<List<BrandModel>> getBrands();
 }
@@ -19,28 +19,30 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<List<VehicleModel>> getAllVehicles() async {
     try {
       final response = await getRequest('vendor-vehicle');
-      // print("sources response ${response.data}");
-      // print("sources response ${response.data['data']['vehicles']}");
+      print("sources response ${response.data}");
 
       if (response.statusCode == 200) {
-        print("sources response ${response.data['data']['vendorVehicles']}");
-        final List<dynamic> vehicleJsonList = response.data['data']['vendorVehicles'];
-        final List<VehicleModel> vehicleModels = vehicleJsonList
-            .map((json) => VehicleModel.fromJson(json as Map<String, dynamic>))
-            .toList();
-        // List<VehicleModel> jsonList = json.decode(response.data['data']['vehicles']);
-        // List<VehicleModel> vehicleModels = response.data['data']['vehicles'];
-        print("vehicleModelLists $vehicleModels");
-        return vehicleModels; // Correctly parse to List<VehicleModel>
+        if (response.data != null && 
+            response.data['data'] != null && 
+            response.data['data']['vendorVehicles'] != null) {
+          final List<dynamic> vehicleJsonList = response.data['data']['vendorVehicles'];
+          if (vehicleJsonList.isEmpty) {
+            return [];
+          }
+          return vehicleJsonList
+              .map((json) => VehicleModel.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }
+        return []; // Return empty list if no data
       } else {
-        throw Exception('Failed to load vehicles');
+        print("Error status code: ${response.statusCode}");
+        return []; // Return empty list on error
       }
     } catch (e) {
       print("sources error $e");
-      throw ServerException(e.toString());
+      return []; // Return empty list on error
     }
   }
-
 
   @override
   Future<List<VehicleModel>> getPopularBikes() async {
@@ -48,13 +50,16 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       final response = await getRequest('vehicle-preference/popular-bikes');
       print('Popular Bikes Response: ${response.data}');
       if (response.statusCode == 200) {
-        final List<dynamic> vehicles = response.data['data'];
-        return vehicles.map((json) => VehicleModel.fromJson(json)).toList();
+        if (response.data != null && response.data['data'] != null) {
+          final List<dynamic> vehicles = response.data['data'];
+          return vehicles.map((json) => VehicleModel.fromJson(json)).toList();
+        }
+        return [];
       }
-      throw ServerException('Failed to load popular bikes');
+      return [];
     } catch (e) {
       print('Popular Bikes Error: $e');
-      throw ServerException(e.toString());
+      return [];
     }
   }
 
@@ -64,27 +69,45 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       final response = await getRequest('vehicle-preference/popular-cars');
       print('Popular Cars Response: ${response.data}');
       if (response.statusCode == 200) {
-        final List<dynamic> vehicles = response.data['data'];
-        return vehicles.map((json) => VehicleModel.fromJson(json)).toList();
+        if (response.data != null && response.data['data'] != null) {
+          final List<dynamic> vehicles = response.data['data'];
+          return vehicles.map((json) => VehicleModel.fromJson(json)).toList();
+        }
+        return [];
       }
-      throw ServerException('Failed to load popular cars');
+      return [];
     } catch (e) {
       print('Popular Cars Error: $e');
-      throw ServerException(e.toString());
+      return [];
     }
   }
 
   @override
-  Future<List<VehicleModel>> getUserPreferredVehicles() async {
+  Future<List<VehicleModel>> getUserPreferredVehicles(String latitude, String longitude) async {
     try {
-      final response = await getRequest('vehicle-preference/user-preferences');
+      final response = await getRequest('vehicle-preference/user-preferences?latitude=$latitude&longitude=$longitude');
       print('User Preferred Response: ${response.data}');
       if (response.statusCode == 200) {
-        final List<dynamic> vehicles = response.data['data'] as List;
-        return vehicles
-            .map((json) => VehicleModel.fromJson(json as Map<String, dynamic>))
-            .toList();
-            
+        if (response.data != null && response.data['data'] != null && response.data['data']['vehicles'] != null) {
+          final List<dynamic> vehicles = response.data['data']['vehicles'] as List;
+          return vehicles.map((json) {
+            // Create a merged map with all necessary data
+            final Map<String, dynamic> mergedData = {
+              '_id': json['_id'],
+              'name': json['vehicle_id']['name'],
+              'images': json['images'] ?? [],
+              'daily_rate': json['daily_rate'],
+              'availability_status': json['availability_status'] ?? 'Not Available',
+              'average_rating': json['average_rating'] ?? 0.0,
+              'seats': json['vehicle_id']['seats'] ?? 0,
+              'fuel_type': json['vehicle_id']['fuel_type'] ?? '',
+              'engine_cc': json['vehicle_id']['engine_cc'] ?? 0,
+              // Add any other fields you need from the nested structure
+            };
+            print('Merged Data: $mergedData');
+            return VehicleModel.fromJson(mergedData);
+          }).toList();
+        }
       }
       return [];
     } catch (e) {
@@ -99,15 +122,17 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       final response = await getRequest('vehicle-preference/best-deals');
       print('Best Deals Response: ${response.data}');
       if (response.statusCode == 200) {
-        final List<dynamic> vehicles = response.data['data'] as List;
-        return vehicles
-            .map((json) => VehicleModel.fromJson(json as Map<String, dynamic>))
-            .toList();
+        if (response.data != null && response.data['data'] != null) {
+          final List<dynamic> vehicles = response.data['data'] as List;
+          return vehicles
+              .map((json) => VehicleModel.fromJson(json as Map<String, dynamic>))
+              .toList();
+        }
       }
-      throw ServerException('Failed to load best deals');
+      return [];
     } catch (e) {
       print('Best Deals Error: $e');
-      throw ServerException(e.toString());
+      return [];
     }
   }
 
@@ -115,15 +140,20 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<List<BrandModel>> getBrands() async {
     try {
       final response = await getRequest('make-model/make');
-      print('Brands Response: ${response.data}');
+      // print('Brands Response: ${response.data}');
       if (response.statusCode == 200) {
-        final List<dynamic> brands = response.data['data']['makes'] as List;
-        return brands.map((json) => BrandModel.fromJson(json)).toList();
+        if (response.data != null && 
+            response.data['data'] != null && 
+            response.data['data']['makes'] != null) {
+          final List<dynamic> brands = response.data['data']['makes'] as List;
+          return brands.map((json) => BrandModel.fromJson(json)).toList();
+        }
+        return [];
       }
-      throw ServerException('Failed to load brands');
+      return [];
     } catch (e) {
       print('Brands Error: $e');
-      throw ServerException(e.toString());
+      return [];
     }
   }
 }

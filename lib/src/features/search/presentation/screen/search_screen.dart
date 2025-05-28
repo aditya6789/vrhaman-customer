@@ -20,6 +20,7 @@ import 'package:vrhaman/src/utils/google_api.dart';
 import 'package:vrhaman/src/utils/search_sugesstion.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:vrhaman/src/utils/toast.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -41,7 +42,8 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _location; // Add this line to define _pickupLocation
   String? _locationPlaceId; // Add this line to define _pickupPlaceId
   // TextEditingController pickupController = TextEditingController(); // Add this line to define pickupController
-
+double?latitude;
+double?longitude;
   Future<void> _selectDate(
       BuildContext context, TextEditingController controller) async {
     DateTime? pickedDate = await showDatePicker(
@@ -57,6 +59,15 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     }
   }
+
+
+void _getlocationlatlong() async {
+  final location = await getLatLng(_locationPlaceId!);
+  latitude = location.latitude;
+  longitude = location.longitude;
+}
+
+
 
   Future<void> _selectTime(
       BuildContext context,
@@ -74,10 +85,7 @@ class _SearchScreenState extends State<SearchScreen> {
           controller.text = pickedTime.format(context);
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Please select a time between 9 AM and 10 PM')),
-        );
+        showToast('Please select a time between 9 AM and 10 PM' , isSuccess: false);
       }
     }
   }
@@ -309,19 +317,12 @@ class _SearchScreenState extends State<SearchScreen> {
                 location: _locationController.text,
                 date: _fromDateController.text,
                 time: _startTimeController.text,
+                duration: selectedDuration ?? '',
               ),
             ),
           );
         } else if (state is SearchError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red[400],
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-              margin: EdgeInsets.all(16.w),
-            ),
-          );
+          showToast(state.message , isSuccess: false);
         }
       },
       child: Scaffold(
@@ -396,17 +397,35 @@ class _SearchScreenState extends State<SearchScreen> {
                             borderColor: Colors.transparent,
                             onChanged: _onPickupTextChanged,
                             currentlocation: () async {
-                              Position position = await Geolocator.getCurrentPosition(
-                                desiredAccuracy: LocationAccuracy.high
-                              );
-                              List<Placemark> placemarks = await placemarkFromCoordinates(
-                                position.latitude, position.longitude
-                              );
-                              Placemark place = placemarks[0];
-                              _locationController.text = place.name ?? 'Unknown location';
-                              final suggestions = await fetchSuggestions(place.name ?? '');
-                              if (suggestions.isNotEmpty) {
-                                _locationPlaceId = suggestions.first.placeId;
+                              try {
+                                Position position = await Geolocator.getCurrentPosition(
+                                  desiredAccuracy: LocationAccuracy.high
+                                );
+                                
+                                List<Placemark> placemarks = await placemarkFromCoordinates(
+                                  position.latitude, 
+                                  position.longitude
+                                );
+                                
+                                if (placemarks.isNotEmpty) {
+                                  Placemark place = placemarks[0];
+                                  String address = '${place.street}, ${place.subLocality}, ${place.locality}';
+                                  
+                                  setState(() {
+                                    _locationController.text = address;
+                                    latitude = position.latitude;
+                                    longitude = position.longitude;
+                                    _location = address;
+                                  });
+
+                                  final suggestions = await fetchSuggestions(address);
+                                  if (suggestions.isNotEmpty) {
+                                    _locationPlaceId = suggestions.first.placeId;
+                                    _getlocationlatlong();
+                                  }
+                                }
+                              } catch (e) {
+                                showToast('Could not get current location' , isSuccess: false);
                               }
                             },
                           ),
@@ -433,6 +452,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     _locationPlaceId = prediction.placeId;
                                     _locationController.text = _location ?? '';
                                     _locationPredictions = [];
+                                    _getlocationlatlong();
                                   });
                                 },
                                 onFavoriteTap: (prediction) {
@@ -440,7 +460,6 @@ class _SearchScreenState extends State<SearchScreen> {
                                 },
                               ),
                             ),
-                          
                           SizedBox(height: 32.h),
                           
                           // Date and Time Section
@@ -531,16 +550,13 @@ class _SearchScreenState extends State<SearchScreen> {
         scrollDirection: Axis.horizontal,
         physics: BouncingScrollPhysics(),
         children: [
-          '12 hours',
-          '1 day',
-          '1 week',
-          '2 weeks',
-          '3 weeks',
-          '1 month',
-          '2 months'
+         'Day',
+         'Week',
+         'Month',
         ].map((duration) => _buildDurationChip(duration)).toList(),
       ),
     );
+
   }
 
   Widget _buildDurationChip(String duration) {
@@ -823,9 +839,7 @@ class _SearchScreenState extends State<SearchScreen> {
         isLoadingLocation = false;
         currentLocation = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not get current location')),
-      );
+      showToast('Could not get current location' , isSuccess: false);
     }
   }
 
@@ -871,16 +885,10 @@ class _SearchScreenState extends State<SearchScreen> {
         _startTimeController.text.isEmpty ||
         selectedDuration == null ||
         selectedVehicleType == null ||
+        latitude == null ||
+        longitude == null ||
         _locationController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please fill in all fields'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: EdgeInsets.all(10),
-        ),
-      );
+      showToast('Please fill in all fields' , isSuccess: false);
       return;
     }
 
@@ -891,8 +899,8 @@ class _SearchScreenState extends State<SearchScreen> {
         duration: selectedDuration!,
         vehicleType: selectedVehicleType!,
         location: LocationSearch(
-          latitude: 0,
-          longitude: 0,
+          latitude: latitude!,
+          longitude: longitude!,
         ),
       ),
     );
@@ -908,19 +916,12 @@ class _SearchScreenState extends State<SearchScreen> {
             location: _locationController.text,
             date: _fromDateController.text,
             time: _startTimeController.text,
+            duration: selectedDuration ?? '',
           ),
         ),
       );
     } else if (searchState is SearchError) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(searchState.message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: EdgeInsets.all(10),
-        ),
-      );
+      showToast(searchState.message , isSuccess: false);
     }
   }
 

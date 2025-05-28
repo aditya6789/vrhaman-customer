@@ -7,6 +7,7 @@ import 'package:vrhaman/src/utils/api_response.dart';
 abstract interface class WishlistDataSource {
   Future<void> addWishlist(AddWishlistModel addWishlist);
   Future<List<WishlistModel>> getWishlist();
+  Future<void> deleteWishlist(String vehicleId);
 }
 
 class WishlistDataSourceImpl implements WishlistDataSource {
@@ -47,4 +48,19 @@ class WishlistDataSourceImpl implements WishlistDataSource {
     }
   }
 
+  @override
+  Future<void> deleteWishlist(String vehicleId) async {
+    try {
+      final response = await deleteRequest('wishlist/$vehicleId');
+      print('wishlist: ${response}');
+      if (response.statusCode == 200) {
+        print('wishlist deleted');
+        return response.data;
+      } else {
+        throw Exception(response);
+      }
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:vrhaman/src/core/error/failure.dart';
+import 'package:vrhaman/src/features/document/data/models/documentDataModel.dart';
 import 'package:vrhaman/src/features/document/domain/entities/documentData.dart';
 import 'package:vrhaman/src/features/document/domain/usecases/document_usecases.dart';
 
@@ -14,6 +15,15 @@ class DocumentCubit extends Cubit<DocumentState> {
   Future<void> uploadDocument(DocumentData documentData) async {
     emit(DocumentLoading());
     final failureOrSuccess = await uploadDocumentUseCase(documentData);
+    failureOrSuccess.fold(
+      (failure) => emit(DocumentError(_mapFailureToMessage(failure))),
+      (documentData) => emit(DocumentUploaded(documentData)),
+    );
+  }
+
+  Future<void> updateDocument(DocumentData documentData) async {
+    emit(DocumentLoading());
+    final failureOrSuccess = await uploadDocumentUseCase.updateDocumentUseCase(documentData);
     failureOrSuccess.fold(
       (failure) => emit(DocumentError(_mapFailureToMessage(failure))),
       (documentData) => emit(DocumentUploaded(documentData)),

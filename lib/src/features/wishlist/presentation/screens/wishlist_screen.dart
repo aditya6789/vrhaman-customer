@@ -32,6 +32,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
             padding: const EdgeInsets.all(16.0),
             child: BlocBuilder<WishlistCubit, WishlistState>(
               builder: (context, state) {
+                print('wishlist state: $state');
                 if (state is WishlistLoading) {
                   return const Loading();
                 } else if (state is WishlistLoaded) {

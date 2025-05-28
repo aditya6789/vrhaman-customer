@@ -87,15 +87,21 @@ class VehicleDetailInfo extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                vehicleModel.name,
-                style: TextStyle(
-                  fontSize: 24.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(
+                      vehicleModel.name,
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
                Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -142,14 +148,14 @@ class VehicleDetailInfo extends StatelessWidget {
               _buildInfoChip(
                 vehicleModel.availabilityStatus,
                 Icons.check_circle,
-                Colors.green[700]!,
+                vehicleModel.availabilityStatus == 'Available' ? Colors.green[700]! : Colors.red[700]!,
               ),
               SizedBox(width: 8.w),
-              _buildInfoChip(
-                vehicleModel.availableDelivery,
-                Icons.delivery_dining,
-                Colors.blue[700]!,
-              ),
+                _buildInfoChip(
+                  vehicleModel.availableDelivery,
+                  Icons.delivery_dining,
+                  vehicleModel.availableDelivery == 'Deliverable' ? Colors.blue[700]! : Colors.red[700]!,
+                ),
             ],
           ),
           SizedBox(height: 8.h),

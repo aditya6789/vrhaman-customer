@@ -6,17 +6,21 @@ import 'package:vrhaman/constants.dart';
 import 'package:vrhaman/src/app.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vrhaman/src/features/address/presentation/cubit/address_cubit.dart';
+import 'package:vrhaman/src/features/address/presentation/screens/address_screen.dart';
 import 'package:vrhaman/src/features/booking/domain/entities/bookingAvailable.dart';
 import 'package:vrhaman/src/features/booking/domain/entities/bookingdata.dart';
 import 'package:vrhaman/src/features/booking/presentation/cubit/booking_cubit.dart';
 import 'package:vrhaman/src/features/booking/presentation/screens/booking_failure_screen.dart';
 import 'package:vrhaman/src/features/booking/presentation/screens/booking_success_screen.dart';
+import 'package:vrhaman/src/features/booking/presentation/widget/show_address_bottom_sheet.dart';
 import 'package:vrhaman/src/features/home/presentation/pages/bottom_navigation_bar.dart';
 import 'package:vrhaman/src/features/home/presentation/pages/home_screen.dart';
 import 'package:vrhaman/src/features/vehicle_details/domain/entities/vehicleDetails.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:vrhaman/src/utils/api_response.dart';
+import 'package:vrhaman/src/utils/toast.dart';
 
 import 'package:vrhaman/src/utils/user_prefences.dart';
 
@@ -39,6 +43,7 @@ class _BookingScreenState extends State<BookingScreen> {
   bool isDeliveryAtHome = false;
   String? paymentType = 'full';
   double totalPrice = 0;
+    double basePrice = 0;
   BookingAvailable? bookingAvailable;
 
   TextEditingController _startTimeController = TextEditingController();
@@ -48,6 +53,8 @@ class _BookingScreenState extends State<BookingScreen> {
   bool isPaymentComplete = false;
   Razorpay _razorpay = Razorpay();
   List<DateTime> bookedDates = [];
+
+  String? selectedAddressId;
 
   void _getVehilesDate() async {
     final response =
@@ -70,11 +77,13 @@ class _BookingScreenState extends State<BookingScreen> {
   void initState() {
     super.initState();
     _getVehilesDate();
+  
     
     selectedDaysDuration = null;
     selectedWeeksDuration = null;
     selectedMonthsDuration = null;
     selectedDuration = '1 day';
+    context.read<AddressCubit>().getAddresses();
   }
 
   @override
@@ -102,13 +111,8 @@ class _BookingScreenState extends State<BookingScreen> {
             DateFormat('MM/dd/yyyy').format(selectedDate);
       });
       Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Selected date is already booked')),
-      );
-    }
+    } 
   }
-
   void _showCalendar() {
     showModalBottomSheet(
       context: context,
@@ -242,7 +246,74 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                   ),
                 ),
-                onDaySelected: _onDateSelected,
+                onDaySelected: (selectedDate, focusedDate) {
+                  if (_isDateBooked(selectedDate)) {
+                    // Show a custom dialog instead of a bottom sheet
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          backgroundColor: lightGreyColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          content: Padding(
+                            padding: EdgeInsets.all(24.h),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: errorColor,
+                                  size: 50.sp,
+                                ),
+                                SizedBox(height: 20.h),
+                                Text(
+                                  'Oops!',
+                                  style: TextStyle(
+                                    fontSize: 24.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                SizedBox(height: 12.h),
+                                Text(
+                                  'The selected date is already booked.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 18.sp,
+                                    color: greyColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                child: Text(
+                                  'Okay',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    
+                    );
+                  } else {
+                    _onDateSelected(selectedDate, focusedDate);
+                  }
+                },
                 calendarStyle: CalendarStyle(
                   outsideDaysVisible: false,
                   weekendTextStyle: TextStyle(color: Colors.red[400]),
@@ -356,6 +427,7 @@ class _BookingScreenState extends State<BookingScreen> {
       vehicleId: widget.vehicleId,
       vendorId: widget.vehicleDetails.vendorId,
       isDeliveryAtHome: isDeliveryAtHome,
+      addressId: selectedAddressId,
     ));
 
       
@@ -424,6 +496,7 @@ class _BookingScreenState extends State<BookingScreen> {
       vehicleId: widget.vehicleId,
       vendorId: widget.vehicleDetails.vendorId,
       isDeliveryAtHome: isDeliveryAtHome,
+      addressId: selectedAddressId,
     ));
 
       
@@ -431,28 +504,7 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _showValidationError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            SizedBox(width: 8.w),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
-        margin: EdgeInsets.all(16.w),
-      ),
-    );
+    showToast(message , isSuccess: false);
   }
 
   TimeOfDay _parseTimeString(String timeString) {
@@ -543,24 +595,157 @@ class _BookingScreenState extends State<BookingScreen> {
     int days = int.parse(selectedDaysDuration ?? '0');
     int weeks = int.parse(selectedWeeksDuration ?? '0');
     int months = int.parse(selectedMonthsDuration ?? '0');
+    print("Days: $days");
+    print("Weeks: $weeks");
+    print("Months: $months");
+
+    double price = 0;
     
-    double basePrice = 0;
+  
     if (days > 0) {
-      basePrice += days * widget.vehicleDetails.dailyPrice.toDouble();
+      // Calculate daily price based on number of days selected
+      if(days == 1){
+        setState(() {
+          basePrice = widget.vehicleDetails.dailyPrice.toDouble();
+        });
+      } else if (days == 2) {
+        setState(() {
+          basePrice = widget.vehicleDetails.twoDayPrice.toDouble();
+        });
+
+       
+      } else if (days == 3) {
+        print("Days = 3");
+
+        double dailyRate = widget.vehicleDetails.threeDayPrice.toDouble();
+        setState(() {
+          basePrice = dailyRate;
+        });
+       
+      } else if (days == 4) {
+        print("Days = 4");
+        double dailyRate = widget.vehicleDetails.fourDayPrice.toDouble();
+        setState(() {
+          basePrice = dailyRate;
+        });
+    
+      } else if (days == 5) {
+        print("Days = 5");
+        double dailyRate = widget.vehicleDetails.fiveDayPrice.toDouble();
+        setState(() {
+          basePrice = dailyRate;
+        });
+       
+      } else if (days == 6) {
+        print("Days = 6");
+        double dailyRate = widget.vehicleDetails.sixDayPrice.toDouble();
+        setState(() {
+          basePrice = dailyRate;
+        });
+              
+
+      } else {
+        print("Days > 6");
+      
+        setState(() {
+          basePrice = widget.vehicleDetails.dailyPrice.toDouble();
+        });
+      }
     }
     if (weeks > 0) {
-      basePrice += weeks * widget.vehicleDetails.weeklyPrice.toDouble();
+      // Calculate weekly price based on number of weeks selected
+      if(weeks == 1){
+         double weeklyRate = widget.vehicleDetails.twoWeekPrice.toDouble();
+       
+        setState(() {
+        basePrice = widget.vehicleDetails.weeklyPrice.toDouble();
+       });
+      
+      }else if (weeks == 2) {
+        print("Weeks >= 2");
+        // Apply 10% discount for 2 or more weeks
+        double weeklyRate = widget.vehicleDetails.twoWeekPrice.toDouble();
+       
+        setState(() {
+        basePrice = weeklyRate;
+       });
+       
+      } 
+      else if (weeks == 3) {
+        print("Weeks == 3");
+        // Apply 15% discount for 3 weeks
+        double weeklyRate = widget.vehicleDetails.threeWeekPrice.toDouble();
+       
+        setState(() {
+        basePrice = weeklyRate;
+       });
+       
+      }
+
+      else {
+        print("Weeks < 2");
+       
+        setState(() {
+        basePrice = widget.vehicleDetails.weeklyPrice.toDouble();
+       });
+      }
     }
     if (months > 0) {
-      basePrice += months * widget.vehicleDetails.monthlyPrice.toDouble();
+      // Calculate monthly price based on number of months selected
+      if(months == 1){
+        double monthlyRate = widget.vehicleDetails.monthlyPrice.toDouble();
+       
+        setState(() {
+        basePrice = monthlyRate;
+       });
+     
+      }else if (months == 2) {
+        print("Months >= 2");
+        // Apply 10% discount for 2 or more months
+        double monthlyRate = widget.vehicleDetails.twoMonthPrice.toDouble();
+       
+        setState(() {
+        basePrice = monthlyRate;
+       });
+   
+      } 
+      else if (months == 3) {
+        print("Months == 3");
+        // Apply 15% discount for 3 months
+        double monthlyRate = widget.vehicleDetails.threeMonthPrice.toDouble();
+     
+        setState(() {
+        basePrice = monthlyRate;
+       });
+       
+      }
+      else {
+        print("Months < 2");
+       
+        setState(() {
+        basePrice = widget.vehicleDetails.monthlyPrice.toDouble();
+       });
+      }
     }
     
+    // Calculate delivery fee if home delivery is selected
     double deliveryFee = isDeliveryAtHome ? widget.vehicleDetails.deliveryFees.toDouble() : 0;
-    
+    print("Delivery Fee: $deliveryFee");
+
     setState(() {
       totalPrice = basePrice + deliveryFee;
     });
+
   }
+
+  Future<void>_checkAddress()async{
+    final address = await getRequest('users/address');
+    print("Address: $address");
+    if(address.data['data'] == null){
+      Navigator.push(context, MaterialPageRoute(builder: (context)=> AddressScreen()));
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -616,9 +801,7 @@ class _BookingScreenState extends State<BookingScreen> {
               _onpartialbookingPressed();
             }
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Vehicle is not available')));
-            }
+                  showToast('Vehicle is not available' , isSuccess: false);}
           }
           if (state is BookingError) {
             Navigator.push(
@@ -653,7 +836,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12.r),
                       child: Image.network(
-                        '$IMAGE_URL${widget.vehicleDetails.images[0]}',
+                        '${widget.vehicleDetails.images[0]}',
                         height: 80.h,
                         width: 80.h,
                         fit: BoxFit.cover,
@@ -739,7 +922,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         Expanded(
                           child: _buildInputField(
                             controller: _startDateController,
-                            label: 'Pick-up Date',
+                            label: 'Date',
                             icon: Icons.calendar_today_rounded,
                             onTap: _showCalendar,
                           ),
@@ -764,7 +947,15 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
 
+              if(widget.vehicleDetails.availableDelivery == 'Non-Deliverable')...[
+
+              SizedBox(height: 30.h),
+              ]else...[ 
+                SizedBox(height: 0.h),
+              ],
+
               // Delivery Option
+              if(widget.vehicleDetails.availableDelivery == 'Deliverable')
               Container(
                 margin: EdgeInsets.all(16.w),
                 padding: EdgeInsets.all(16.w),
@@ -831,7 +1022,32 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                         Switch(
                           value: isDeliveryAtHome,
-                          onChanged: (value) => setState(() => isDeliveryAtHome = value),
+                          onChanged: (value) async {
+                            if (value) {
+                              // Show address bottom sheet when turning on
+                              final addressId = await showAddressBottomSheet(context);
+                              if (addressId != null) {
+                                setState(() {
+                                  selectedAddressId = addressId;
+                                  isDeliveryAtHome = true;
+                                  totalPrice = basePrice + widget.vehicleDetails.deliveryFees.toDouble();
+                                });
+                                print('Selected Address ID: $addressId');
+                              } else {
+                                // If no address was selected, keep switch off
+                                setState(() {
+                                  isDeliveryAtHome = false;
+                                });
+                              }
+                            } else {
+                              // When turning off
+                              setState(() {
+                                selectedAddressId = null;
+                                isDeliveryAtHome = false;
+                                totalPrice = basePrice;
+                              });
+                            }
+                          },
                           activeColor: primaryColor,
                         ),
                       ],
@@ -868,7 +1084,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       ),
                     ),
                     SizedBox(height: 16.h),
-                    _buildPriceRow('Rental Charge', '₹${widget.vehicleDetails.dailyPrice}'),
+                    _buildPriceRow('Rental Charge', '₹${basePrice}'),
                     _buildPriceRow(
                       'Delivery Fee',
                       isDeliveryAtHome ? '₹${widget.vehicleDetails.deliveryFees}' : '₹0',
@@ -877,7 +1093,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     Divider(height: 24.h),
                     _buildPriceRow(
                       'Total Amount',
-                      '₹${totalPrice.toStringAsFixed(2)}',
+                      '₹${totalPrice.round()}',
                       isTotal: true,
                     ),
                   ],
@@ -892,8 +1108,8 @@ class _BookingScreenState extends State<BookingScreen> {
                     ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          // Set partial payment (30% of total)
-                          double partialAmount = totalPrice * 0.2;
+                          // Set partial payment (20% of total)
+                          double partialAmount = totalPrice /100 * 20;
                           totalPrice = partialAmount;
                           paymentType = 'partial';
                         });
@@ -916,7 +1132,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           Icon(Icons.payment, color: primaryColor),
                           SizedBox(width: 8.w),
                           Text(
-                            'Pay 30% Now (₹${(totalPrice * 0.3).toStringAsFixed(2)})',
+                            'Pay 20% Now (₹${(totalPrice / 100 * 20).round()})',
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
@@ -937,7 +1153,7 @@ class _BookingScreenState extends State<BookingScreen> {
                           Icon(Icons.payment),
                           SizedBox(width: 8.w),
                           Text(
-                            'Pay Full Amount (₹${totalPrice.toStringAsFixed(2)})',
+                            'Pay Full Amount (₹${totalPrice.round()})',
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w600,
@@ -1036,7 +1252,7 @@ class _BookingScreenState extends State<BookingScreen> {
           Divider(height: 24.h),
           _buildPriceRow(
             'Total Amount',
-            '₹${totalPrice.toStringAsFixed(2)}',
+            '₹${totalPrice.round()}',
             isTotal: true,
           ),
         ],
@@ -1213,25 +1429,25 @@ class _BookingScreenState extends State<BookingScreen> {
         border: Border.all(color: Colors.grey[200]!),
       ),
       child: DropdownButtonFormField<String>(
-        value: selectedTime,
+        value: null,
         icon: SizedBox.shrink(),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.all(16.w),
           border: InputBorder.none,
-          labelText: 'Pick-up Time',
+          labelText: 'Time',
           labelStyle: TextStyle(color: Colors.grey[600]),
           prefixIcon: Icon(Icons.access_time_rounded, color: primaryColor),
         ),
-        items: ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM']
+        items: ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM']
             .map((String value) {
           return DropdownMenuItem<String>(
-            
             value: value,
             child: Text(value),
           );
         }).toList(),
         onChanged: (String? value) {
           setState(() {
+            selectedTime = value;
             _startTimeController.text = value.toString();
           });
         },

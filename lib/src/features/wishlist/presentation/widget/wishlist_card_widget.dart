@@ -6,6 +6,9 @@ import 'package:vrhaman/src/features/vehicle_details/presentation/pages/vehicle_
 import 'package:vrhaman/src/features/wishlist/data/model/wishlistModel.dart';
 import 'package:vrhaman/src/features/wishlist/domain/entities/wishlist.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:vrhaman/src/features/wishlist/presentation/cubit/wishlist_cubit.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vrhaman/src/utils/toast.dart';
 
 class WishlistCardWidget extends StatefulWidget {
   final Wishlist vehicle;
@@ -90,7 +93,7 @@ class _WishlistCardWidgetState extends State<WishlistCardWidget> with SingleTick
                               image: DecorationImage(
                                 image: NetworkImage(
                                   widget.vehicle.vehicleImage.isNotEmpty
-                                      ? '$IMAGE_URL${widget.vehicle.vehicleImage[0]}'
+                                      ? '${widget.vehicle.vehicleImage[0]}'
                                       : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtc3-y63KN_r5LwOC9PNqpwc5C1JPeN36_ug&s',
                                 ),
                                 fit: BoxFit.cover,
@@ -118,6 +121,44 @@ class _WishlistCardWidgetState extends State<WishlistCardWidget> with SingleTick
                                   ),
                                 ),
                               ),
+                            ),
+                          ),
+                        ),
+
+                        Positioned(
+                          top: 16.h,
+                          left: 16.w,
+                          child: InkWell(
+                            onTap: () async {
+                              final wishlistCubit = context.read<WishlistCubit>();
+                              
+                              final result = await wishlistCubit.deleteWishlist(widget.vehicle.id);
+                              
+                              if (!mounted) return;
+                              
+                              result.fold(
+                                (failure) {
+                                  showToast('Failed to delete: ${failure.toString()}' , isSuccess: false);
+                                },
+                                (_) {
+                                  showToast('Item removed from wishlist' );
+                                },
+                              );
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(30.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 12,
+                                    offset: Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(HugeIcons.strokeRoundedDelete01, size: 24.sp, color: Colors.red,),
                             ),
                           ),
                         ),
@@ -200,56 +241,24 @@ class _WishlistCardWidgetState extends State<WishlistCardWidget> with SingleTick
                                         ],
                                       ),
                                     ),
-                                    SizedBox(height: 4.h),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12.r),
-                                        border: Border.all(
-                                          color: Colors.white.withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.star_rounded,
-                                            color: Colors.amber,
-                                            size: 18.sp,
-                                          ),
-                                          SizedBox(width: 4.w),
-                                          Text(
-                                            "4.9",
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                   
+                                    
                                   ],
                                 ),
                               ),
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.attach_money_rounded,
-                                    color: primaryColor,
-                                    size: 20.sp,
-                                  ),
+                                 
                                   Text(
-                                    "${widget.vehicle.vehicleDailyRate}/day",
+                                    "₹ ${widget.vehicle.vehicleDailyRate}/day",
                                     style: TextStyle(
                                       color: primaryColor,
                                       fontSize: 14.sp,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
+
                                 ],
                               ),
                             ],

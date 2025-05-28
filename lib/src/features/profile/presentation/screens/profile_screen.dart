@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:vrhaman/constants.dart';
+import 'package:vrhaman/src/features/address/presentation/screens/address_screen.dart';
 import 'package:vrhaman/src/features/document/presentation/screens/document_screen.dart';
 import 'package:vrhaman/src/features/document/presentation/screens/upload_id_screen.dart';
+import 'package:vrhaman/src/features/notification/presentation/screens/notification_screen.dart';
 import 'package:vrhaman/src/features/profile/presentation/screens/help_support_screen.dart';
 import 'package:vrhaman/src/features/profile/presentation/widget/profile_info_card_widget.dart';
 import 'package:vrhaman/src/features/profile/presentation/widget/show_logout_bottomsheet.dart';
@@ -60,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Scaffold(
       backgroundColor: Color(0xFFF8F9FF),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
 
@@ -91,6 +95,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           _buildMenuSection(
                             title: 'Quick Actions',
                             items: [
+
+                              _MenuItem(
+                                icon: HugeIcons.strokeRoundedNotification02,
+                                title: 'Notifications',
+                                subtitle: 'Manage your notifications',
+                                onTap: () {
+                                  Navigator.push(context, MaterialPageRoute(
+                                      builder: (context) => NotificationScreen()));
+                                },
+                              ),
+
                               _MenuItem(
                                 icon: HugeIcons.strokeRoundedDocumentAttachment,
                                 title: 'Documents',
@@ -114,9 +129,20 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                       builder: (context) => const WishlistScreen()));
                                 },
                               ),
+                              _MenuItem(
+                                icon: HugeIcons.strokeRoundedAddressBook,
+                                title: 'My Address',
+                                subtitle: 'View your saved address',
+                                onTap: () {
+                                  Navigator.push(context, MaterialPageRoute(
+                                      builder: (context) => const AddressScreen()));
+                                },
+                              ),
+
                             ],
                           ),
                           SizedBox(height: 24.h),
+
                           _buildMenuSection(
                             title: 'Support & Info',
                             items: [
@@ -133,12 +159,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                 icon: HugeIcons.strokeRoundedInformationCircle,
                                 title: 'Legal Information',
                                 subtitle: 'Terms and privacy',
+                                onTap: () {
+                                 launchUrl(Uri.parse('https://www.vrhaman.com/privacy-policy'));
+                                },
                               ),
-                              _MenuItem(
-                                icon: HugeIcons.strokeRoundedInformationDiamond,
-                                title: 'About Vrhaman',
-                                subtitle: 'App information',
-                              ),
+                              // _MenuItem(
+                              //   icon: HugeIcons.strokeRoundedInformationDiamond,
+                              //   title: 'About Vrhaman',
+                              //   subtitle: 'App information',
+                              // ),
                             ],
                           ),
                           SizedBox(height: 24.h),

@@ -7,9 +7,9 @@ class DocumentInitial extends DocumentState {}
 class DocumentLoading extends DocumentState {}
 
 class DocumentUploaded extends DocumentState {
-  final DocumentData documentData;
+  final DocumentDataModel documentDataModel;
 
-  DocumentUploaded(this.documentData);
+  DocumentUploaded(this.documentDataModel);
 }
 
 class DocumentError extends DocumentState {

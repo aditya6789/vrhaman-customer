@@ -11,6 +11,7 @@ import 'package:vrhaman/src/utils/api_response.dart';
 
 abstract class BookingVehicleDataSource {
   Future<List<BookingVehicle>> getAllBookingVehicle();
+  Future<BookingVehicle> getBookingVehicleById(String id);
   Future<ConfirmBookingData> postBooking(BookingDataModel bookingDataModel);
   Future<BookingAvailableModel> checkAvailability(BookingDataModel bookingDataModel);
 }
@@ -37,7 +38,19 @@ class BookingVehicleDataSourceImpl implements BookingVehicleDataSource {
     }
   }
   @override
+  Future<BookingVehicle> getBookingVehicleById(String id) async {
+    try {
+      final response = await getRequest('booking/');
+      print("get booking vehicle response ${response.data}");
+      return BookingVehicleModel.fromJson(response.data);
+    } catch (e) {
+      print("get booking vehicle error ${e.toString()}");
+      throw ServerException(e.toString());
+    }
+  }
+  @override
   Future<ConfirmBookingData> postBooking(BookingDataModel bookingDataModel) async {
+    print("post booking data ${bookingDataModel.addressId}");
     try {
       final response = await postRequest('booking/', {
         'start_date': bookingDataModel.startDate,
@@ -48,6 +61,7 @@ class BookingVehicleDataSourceImpl implements BookingVehicleDataSource {
         'vendor_id': bookingDataModel.vendorId,
         'payment_type':bookingDataModel.paymentType,
         'delivery': bookingDataModel.isDeliveryAtHome,
+        'address_id': bookingDataModel.addressId,
       });
       print('booking response ${response.data}');
 

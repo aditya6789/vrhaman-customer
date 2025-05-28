@@ -22,5 +22,8 @@ class GetAllBookingVehiclesUseCase {
   Future<Either<Failure, BookingAvailable>> checkAvailability(BookingData bookingData) async {
     return await repository.checkAvailability(bookingData);
   }
+  Future<Either<Failure, BookingVehicle>> getBookingVehicleById(String id) async {
+    return await repository.getBookingVehicleById(id);
+  }
 }
 

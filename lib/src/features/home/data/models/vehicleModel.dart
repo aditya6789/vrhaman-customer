@@ -11,12 +11,19 @@ class VehicleModel extends Vehicle {
     super.availableDelivery,
     super.availabilityStatus,
     super.vehicleDetails,
+    super.averageRating,
+    super.seats,
+    super.fuelType,
+    super.enginecc,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
     try {
       final vehicleDetails = json['vehicleDetails'] ?? json['vehicle_id'];
-      final name = vehicleDetails is Map ? vehicleDetails['name'] : '';
+      final name = json['name'] ?? (vehicleDetails is Map ? vehicleDetails['name'] : '') ?? '';
+      final seats = json['seats'] ?? (vehicleDetails is Map ? vehicleDetails['seats'] : 0);
+      final fuelType = json['fuel_type'] ?? (vehicleDetails is Map ? vehicleDetails['fuel_type'] : '');
+      final enginecc = json['engine_cc'] ?? (vehicleDetails is Map ? vehicleDetails['engine_cc'] : 0);
       
       List<String> imagesList = [];
       if (json['images'] is List) {
@@ -32,7 +39,11 @@ class VehicleModel extends Vehicle {
         dailyRate: (json['daily_rate'] ?? 0).toDouble(),
         availableDelivery: json['available_delivery']?.toString(),
         availabilityStatus: json['availability_status']?.toString(),
+        averageRating: json['average_rating']?.toDouble() ?? 0.0,
         vehicleDetails: vehicleDetails is Map ? Map<String, dynamic>.from(vehicleDetails) : null,
+        seats: seats ?? 0,
+        fuelType: fuelType ?? '',
+        enginecc: enginecc ?? '',
       );
     } catch (e, stackTrace) {
       print('Error parsing vehicle JSON: $e');

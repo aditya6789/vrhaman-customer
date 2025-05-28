@@ -1,9 +1,12 @@
 class VehicleDetails {
-  final String id ;
+  final String id;
   final String name;
   final String vendorId;
   final String bussinessName;
   final String bussinessAddress;
+  final String pickupAddress;
+  final double pickupLatitude;
+  final double pickupLongitude;
   final int dailyPrice;
   final int twoDayPrice;
   final int threeDayPrice;
@@ -13,10 +16,12 @@ class VehicleDetails {
   final int weeklyPrice;
   final int twoWeekPrice;
   final int threeWeekPrice;
-final int monthlyPrice;
-final int twoMonthPrice;
-final int threeMonthPrice;
-final int deliveryFees; 
+  final int monthlyPrice;
+  final int twoMonthPrice;
+  final int threeMonthPrice;
+  final int deliveryFees;
+  final String cancellationPolicy;
+  final String privacyPolicy;
 
 
   final String availableDelivery;
@@ -34,7 +39,44 @@ final int deliveryFees;
   final int torque;
   final int weight;
   final List<dynamic> features;
-  
 
-  VehicleDetails({required this.id , required this.name , required this.vendorId , required this.bussinessName , required this.bussinessAddress , required this.dailyPrice , required this.twoDayPrice , required this.threeDayPrice , required this.fourDayPrice , required this.fiveDayPrice , required this.sixDayPrice , required this.weeklyPrice , required this.twoWeekPrice , required this.threeWeekPrice , required this.monthlyPrice , required this.twoMonthPrice , required this.threeMonthPrice , required this.deliveryFees , required this.availableDelivery , required this.availabilityStatus , required this.images , required this.year , required this.variant ,  required this.engineCc , required this.fuelType , required this.bodyType , required this.mileage , required this.topSpeed , required this.horsepower , required this.torque , required this.weight , required this.features});
+  VehicleDetails(
+      {required this.id,
+      required this.name,
+      required this.vendorId,
+      required this.bussinessName,
+      required this.bussinessAddress,
+      required this.pickupAddress,
+      required this.pickupLatitude,
+      required this.pickupLongitude,
+      required this.dailyPrice,
+      required this.twoDayPrice,
+      required this.threeDayPrice,
+      required this.fourDayPrice,
+      required this.fiveDayPrice,
+      required this.sixDayPrice,
+      required this.weeklyPrice,
+      required this.twoWeekPrice,
+      required this.threeWeekPrice,
+      required this.monthlyPrice,
+      required this.twoMonthPrice,
+      required this.threeMonthPrice,
+      required this.deliveryFees,
+      required this.cancellationPolicy,
+      required this.privacyPolicy,
+      required this.availableDelivery,
+      required this.availabilityStatus,
+      required this.images,
+      required this.year,
+      required this.variant,
+
+      required this.engineCc,
+      required this.fuelType,
+      required this.bodyType,
+      required this.mileage,
+      required this.topSpeed,
+      required this.horsepower,
+      required this.torque,
+      required this.weight,
+      required this.features});
 }

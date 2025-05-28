@@ -64,10 +64,7 @@ class _BookedScreenState extends State<BookedScreen> with TickerProviderStateMix
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
+          automaticallyImplyLeading: false,
           title: const Text(
             'Booking History',
             style: TextStyle(color: Colors.black),

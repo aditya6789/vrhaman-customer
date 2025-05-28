@@ -2,18 +2,132 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:vrhaman/constants.dart';
+import 'package:vrhaman/src/core/cubit/review_cubit.dart';
+import 'package:vrhaman/src/core/entities/review_entity.dart';
 import 'package:vrhaman/src/features/booking/domain/entities/bookingVehicle.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:vrhaman/src/features/booking/presentation/cubit/booking_cubit.dart';
+import 'package:vrhaman/src/utils/api_response.dart';
+import 'package:vrhaman/src/utils/launch_url.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vrhaman/src/utils/toast.dart';
+import 'package:vrhaman/src/utils/user_prefences.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-
-class BookingDetailsScreen extends StatelessWidget {
+// ignore: must_be_immutable
+class BookingDetailsScreen extends StatefulWidget {
   final BookingVehicle bookingDetails;
 
-  const BookingDetailsScreen({
+   BookingDetailsScreen({
     Key? key,
     required this.bookingDetails,
   }) : super(key: key);
+
+  @override
+  State<BookingDetailsScreen> createState() => _BookingDetailsScreenState();
+}
+
+
+class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+  UserPreferences userPreferences = UserPreferences();
+
+  TextEditingController commentController = TextEditingController();
+
+  int rating = 0;
+  int amount = 0;
+  double partialAmount = 0;
+
+  Razorpay _razorpay = Razorpay();
+
+  @override
+  void initState() {
+    super.initState();
+    // context.read<BookingCubit>().getBookingVehicleById(widget.bookingDetails.id);
+    partialAmount = widget.bookingDetails.totalPrice / 100 * 20;
+
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+  }
+
+    void _makePayment() {
+    if (!mounted) return;
+    
+    var options = {
+      'key': 'rzp_live_jkdw3rMi0JwTiT',
+      'amount': (amount * 100).toInt(),
+      'name': 'Vrhaman',
+      'description': 'Vehicle Booking Payment',
+      'prefill': {
+        'contact': '8968779413',
+        'email': 'support@vrhaman.com',
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      print('Error making payment: $e');
+    }
+  }
+
+    void _handlePaymentError(PaymentFailureResponse response) {
+    print('Payment failed: ${response.message}');
+  }
+
+  
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    print('handle payment success ${response.data}');
+    if (!mounted) return;
+
+    try {
+      await postRequest('payment/success', {
+        'payment_id': response.paymentId,
+        'booking_id': widget.bookingDetails.id,
+        'amount': widget.bookingDetails.totalPrice,
+        'status': 'Confirmed',
+      });
+      if (!mounted) return;
+    } catch (e) {
+      print('Error updating payment status: $e');
+    }
+
+    _updateBookingStatus(widget.bookingDetails.status ?? '', response.paymentId ?? '');
+  }
+
+  void _updateBookingStatus(String status, String paymentId) async {
+    try {
+      final response = await postRequest('booking/full-payment', {
+        'booking_id': widget.bookingDetails.id,
+       
+      });
+      if (response.statusCode == 200) {
+        context.read<BookingCubit>().getBookings();
+        Navigator.pop(context);
+        showToast('Booking status updated successfully');
+
+       
+      }
+    } catch (e) {
+      print('Error updating booking status: $e');
+    }
+    
+
+
+  }
+
+  void calculateAmount() {
+    final fullAmount = widget.bookingDetails.totalPrice ?? 0;
+    print("full amount $fullAmount");
+    final newAmount = fullAmount / 100 * 20;
+    final newPartialAmount = fullAmount - newAmount;
+    setState(() {
+      amount = newPartialAmount.toInt();
+    });
+
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +145,7 @@ class BookingDetailsScreen extends StatelessWidget {
       ),
       
       body: SingleChildScrollView(
-        physics: BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
             // Hero Vehicle Image Section with Enhanced Design
@@ -43,12 +157,12 @@ class BookingDetailsScreen extends StatelessWidget {
                 children: [
                   // Background Image with Enhanced Gradient
                   Hero(
-                    tag: 'vehicle_${bookingDetails.id}',
+                    tag: 'vehicle_${widget.bookingDetails.id}',
                     child: Container(
                       decoration: BoxDecoration(
                         image: DecorationImage(
                           image: NetworkImage(
-                            IMAGE_URL + (bookingDetails.vehicleImages[0] ?? ''),
+                            (widget.bookingDetails.vehicleImages[0] ?? ''),
                           ),
                           fit: BoxFit.cover,
                         ),
@@ -70,7 +184,7 @@ class BookingDetailsScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            _buildStatusBadge(bookingDetails.status ?? 'Pending'),
+                            _buildStatusBadge(widget.bookingDetails.status ?? 'Pending'),
                             Spacer(),
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -85,7 +199,7 @@ class BookingDetailsScreen extends StatelessWidget {
                                   Icon(Icons.timer_outlined, color: Colors.white, size: 16.sp),
                                   SizedBox(width: 4.w),
                                   Text(
-                                    bookingDetails.rentalPeriod ?? 'N/A',
+                                    widget.bookingDetails.rentalPeriod ?? 'N/A',
                                     style: GoogleFonts.poppins(
                                       color: Colors.white,
                                       fontSize: 12.sp,
@@ -99,7 +213,7 @@ class BookingDetailsScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 12.h),
                         Text(
-                          bookingDetails.vehicleName ?? 'Vehicle Name',
+                          widget.bookingDetails.vehicleName ?? 'Vehicle Name',
                           style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 28.sp,
@@ -113,7 +227,7 @@ class BookingDetailsScreen extends StatelessWidget {
                             Icon(Icons.location_on_outlined, color: Colors.white70, size: 16.sp),
                             SizedBox(width: 4.w),
                             Text(
-                              'New Delhi, India',
+                              widget.bookingDetails.pickupAddress ?? 'N/A',
                               style: GoogleFonts.poppins(
                                 color: Colors.white70,
                                 fontSize: 14.sp,
@@ -165,10 +279,10 @@ class BookingDetailsScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildStatusRow('Booking ID', '#${bookingDetails.id ?? 'N/A'}'.substring(0, 8)),
+                  _buildStatusRow('Booking ID', '#${widget.bookingDetails.id ?? 'N/A'}'.substring(0, 8)),
                           _buildAnimatedDivider(isWhite: true),
                
-                  _buildStatusRow('Status', bookingDetails.status ?? 'Pending', isStatus: true),
+                  _buildStatusRow('Status', widget.bookingDetails.status ?? 'Pending', isStatus: true),
                 ],
               ),
             ),
@@ -182,21 +296,21 @@ class BookingDetailsScreen extends StatelessWidget {
                   _buildDetailRow(
                     icon: Icons.directions_car_outlined,
                     label: 'Vehicle',
-                    value: bookingDetails.vehicleName ?? 'N/A',
+                    value: widget.bookingDetails.vehicleName ?? 'N/A',
                     iconColor: primaryColor,
                   ),
                   _buildAnimatedDivider(),
                   _buildDetailRow(
                     icon: Icons.calendar_today_outlined,
                     label: 'Start Date',
-                    value: _formatDate(bookingDetails.startDate),
+                    value: _formatDate(widget.bookingDetails.startDate),
                     iconColor: primaryColor,
                   ),
                   _buildAnimatedDivider(),
                   _buildDetailRow(
                     icon: Icons.access_time_rounded,
                     label: 'Duration',
-                    value: bookingDetails.rentalPeriod ?? 'N/A',
+                    value: widget.bookingDetails.rentalPeriod ?? 'N/A',
                     iconColor: primaryColor,
                   ),
                 ],
@@ -212,15 +326,23 @@ class BookingDetailsScreen extends StatelessWidget {
                   _buildDetailRow(
                     icon: Icons.receipt_long_outlined,
                     label: 'Total Amount',
-                    value: '₹${bookingDetails.totalPrice ?? '0'}',
+                    value: '₹${widget.bookingDetails.totalPrice ?? '0'}',
                     iconColor: Colors.green,
                             // isAmount: true,
+                  ),
+                  _buildAnimatedDivider(),
+                  if (widget.bookingDetails.payment_type == 'partial')
+                  _buildDetailRow(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Partial Payment',
+                    value: '₹${partialAmount.toStringAsFixed(2)}',
+                    iconColor: Colors.orange,
                   ),
                   _buildAnimatedDivider(),
                   _buildDetailRow(
                     icon: Icons.account_balance_wallet_outlined,
                     label: 'Payment Status',
-                    value: bookingDetails.status ?? 'N/A',
+                    value: widget.bookingDetails.payment_type ?? 'N/A',
                     iconColor: Colors.orange,
                   ),
                 ],
@@ -236,26 +358,27 @@ class BookingDetailsScreen extends StatelessWidget {
                   _buildDetailRow(
                     icon: Icons.business,
                     label: 'Business Name',
-                    value: bookingDetails.vendorBusinessName ?? 'N/A',
+                    value: widget.bookingDetails.vendorBusinessName ?? 'N/A',
                     iconColor: Colors.blue[700]!,
                   ),
                   _buildAnimatedDivider(),
                   _buildDetailRow(
                     icon: Icons.location_on_outlined,
                     label: 'Location',
-                    value: bookingDetails.vendorBusinessAddress ?? 'N/A',
+                    value: widget.bookingDetails.vendorBusinessAddress ?? 'N/A',
                     iconColor: Colors.red[600]!,
                   ),
+                  
                   _buildAnimatedDivider(),
                   _buildDetailRow(
                     icon: Icons.phone_outlined,
                     label: 'Phone Number',
-                    value: bookingDetails.vendorPhone ?? 'N/A',
+                    value: widget.bookingDetails.vendorPhone ?? 'N/A',
                     iconColor: Colors.green[600]!,
                     isPhone: true,
                     onTap: () {
-                      if (bookingDetails.vendorPhone != null) {
-                        launch('tel:${bookingDetails.vendorPhone}');
+                      if (widget.bookingDetails.vendorPhone != null) {
+                        launch('tel:${widget.bookingDetails.vendorPhone}');
                       }
                     },
                   ),
@@ -263,12 +386,12 @@ class BookingDetailsScreen extends StatelessWidget {
                   _buildDetailRow(
                     icon: Icons.phone_android_outlined,
                     label: 'Alternative Phone',
-                    value: bookingDetails.vendorAlternativePhone ?? 'N/A',
+                    value: widget.bookingDetails.vendorAlternativePhone ?? 'N/A',
                     iconColor: Colors.green[600]!,
                     isPhone: true,
                     onTap: () {
-                      if (bookingDetails.vendorAlternativePhone != null) {
-                        launch('tel:${bookingDetails.vendorAlternativePhone}');
+                      if (widget.bookingDetails.vendorAlternativePhone != null) {
+                        launch('tel:${widget.bookingDetails.vendorAlternativePhone}');
                       }
                     },
                   ),
@@ -314,7 +437,7 @@ class BookingDetailsScreen extends StatelessWidget {
                                         ),
                                       ),
                                       Text(
-                        bookingDetails.vendorBusinessAddress ?? 'N/A',
+                        widget.bookingDetails.pickupAddress ?? 'N/A',
                         style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           color: Colors.black87,
@@ -328,7 +451,9 @@ class BookingDetailsScreen extends StatelessWidget {
                             ),
                             SizedBox(height: 12.h),
                             OutlinedButton.icon(
-                              onPressed: () {},
+                              onPressed: () {
+                                launchGoogleMaps(widget.bookingDetails.pickupAddress);
+                              },
                               icon: Icon(Icons.directions, size: 18.sp),
                               label: Text('Get Directions'),
                               style: OutlinedButton.styleFrom(
@@ -349,7 +474,7 @@ class BookingDetailsScreen extends StatelessWidget {
                       padding: EdgeInsets.all(16.w),
                       child: Column(
                         children: [
-                          if (bookingDetails.status?.toLowerCase() == 'pending')
+                          if (widget.bookingDetails.status?.toLowerCase() == 'pending')
                             Container(
                               width: double.infinity,
                               height: 50.h,
@@ -373,59 +498,170 @@ class BookingDetailsScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-            if (bookingDetails.payment_type == 'partial')
-                            Column(
-                              children: [
-                                SizedBox(height: 12.h),
-                                Container(
-                                  width: double.infinity,
-                                  height: 50.h,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {},
-                                    icon: Icon(Icons.payment),
-                                    label: Text(
-                                      'Make Full Payment',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12.r),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 8.h),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      size: 14.sp,
-                                      color: Colors.grey[600],
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Text(
-                                      'Make full payment for hassle free pickup',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12.sp,
-                                        color: Colors.grey[600],
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+            // if (widget.bookingDetails.payment_type == 'partial')
+            //                 Column(
+            //                   children: [
+            //                     SizedBox(height: 12.h),
+            //                     Container(
+            //                       width: double.infinity,
+            //                       height: 50.h,
+            //                       child: ElevatedButton.icon(
+            //                         onPressed: () {
+            //                           calculateAmount();
+            //                           _makePayment();
+            //                         },
+            //                         icon: Icon(Icons.payment),
+            //                         label: Text(
+            //                           'Make Full Payment',
+            //                           style: GoogleFonts.poppins(
+            //                             fontSize: 16.sp,
+            //                             fontWeight: FontWeight.w600,
+            //                           ),
+            //                         ),
+            //                         style: ElevatedButton.styleFrom(
+            //                           backgroundColor: primaryColor,
+            //                           foregroundColor: Colors.white,
+            //                           shape: RoundedRectangleBorder(
+            //                             borderRadius: BorderRadius.circular(12.r),
+            //                           ),
+            //                           elevation: 0,
+            //                         ),
+            //                       ),
+            //                     ),
+            //                     SizedBox(height: 8.h),
+            //                     Row(
+            //                       mainAxisAlignment: MainAxisAlignment.center,
+            //                       children: [
+            //                         Icon(
+            //                           Icons.info_outline,
+            //                           size: 14.sp,
+            //                           color: Colors.grey[600],
+            //                         ),
+            //                         SizedBox(width: 4.w),
+            //                         Text(
+            //                           'Make full payment for hassle free pickup',
+            //                           style: GoogleFonts.poppins(
+            //                             fontSize: 12.sp,
+            //                             color: Colors.grey[600],
+            //                             fontStyle: FontStyle.italic,
+            //                           ),
+            //                         ),
+            //                       ],
+            //                     ),
+            //                   ],
+            //                 ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 24.h),
+                    SizedBox(height: 14.h),
+                  // Review Card
+                  _buildDetailsCard(
+                    title: 'Rate & Review',
+                    icon: Icons.star_outline,
+                    content: Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Share your experience',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 12.h),
+                          // Rating Bar
+                          RatingBar.builder(
+                            initialRating: 0,
+                            minRating: 1,
+                            direction: Axis.horizontal,
+                            allowHalfRating: true,
+                            itemCount: 5,
+                            itemSize: 30.w,
+                            itemBuilder: (context, _) => Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            onRatingUpdate: (value) {
+                              rating = value.toInt();
+                            },
+                          ),
+                          SizedBox(height: 16.h),
+                          // Review Text Field
+                          TextFormField(
+                            maxLines: 3,
+                            controller: commentController,
+                            decoration: InputDecoration(
+                              hintText: 'Write your review here...',
+                              hintStyle: GoogleFonts.poppins(
+                                fontSize: 14.sp,
+                                color: Colors.grey[400],
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                borderSide: BorderSide(color: Colors.grey[200]!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                borderSide: BorderSide(color: Colors.grey[200]!),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                                borderSide: BorderSide(color: primaryColor),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: EdgeInsets.all(16.w),
+                            ),
+                          ),
+                          SizedBox(height: 16.h),
+                          // Submit Button
+                          Container(
+                            width: double.infinity,
+                            height: 50.h,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                print('rating: $rating');
+                                final userId = await userPreferences.getUserId();
+                                final result = await context.read<ReviewCubit>().submitReview(ReviewEntity(
+                                  userId: userId ?? '',
+                                  vehicleId:  widget.bookingDetails.vehicleId?? '',
+                                  rating: rating,
+                                  comment: commentController.text,
+                                  createdAt: DateTime.now(),
+                                ));
+                                showToast(result ? 'Review submitted successfully' : 'Failed to submit review' , isSuccess: result);
+                                // Handle review submission
+                              },
+                              icon: Icon(Icons.send_rounded),
+                              label: Text(
+                                'Submit Review',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   ],
                 ),
               ),
@@ -433,6 +669,45 @@ class BookingDetailsScreen extends StatelessWidget {
           ],
         ),
       ),
+      bottomNavigationBar: (widget.bookingDetails.payment_type == 'partial' && 
+                            (
+                             widget.bookingDetails.status == 'Confirmed'))
+          ? Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  calculateAmount();
+                  _makePayment();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Make Full Payment',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -545,32 +820,32 @@ class BookingDetailsScreen extends StatelessWidget {
           color: Colors.grey[50],
           borderRadius: BorderRadius.circular(16.r),
         ),
-        child: Row(
-          children: [
+      child: Row(
+        children: [
             // Icon Container
-            Container(
-              padding: EdgeInsets.all(8.r),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12.r),
+          Container(
+            padding: EdgeInsets.all(8.r),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12.r),
                 border: Border.all(
                   color: iconColor.withOpacity(0.15),
                   width: 1,
                 ),
-              ),
-              child: Icon(icon, color: iconColor, size: 20.sp),
             ),
-            SizedBox(width: 16.w),
+            child: Icon(icon, color: iconColor, size: 20.sp),
+          ),
+          SizedBox(width: 16.w),
             
             // Content
-            Expanded(
+          Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14.sp,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.sp,
                       color: Colors.grey[700],
                       fontWeight: FontWeight.w500,
                     ),
@@ -580,9 +855,9 @@ class BookingDetailsScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          value,
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14.sp,
                             color: isPhone ? primaryColor : Colors.black87,
                             fontWeight: isPhone ? FontWeight.w600 : FontWeight.w500,
                             decoration: isPhone ? TextDecoration.underline : null,
@@ -600,11 +875,11 @@ class BookingDetailsScreen extends StatelessWidget {
                           ),
                         ),
                     ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ],
         ),
       ),
     );

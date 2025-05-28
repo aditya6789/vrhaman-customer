@@ -4,10 +4,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vrhaman/src/core/cubit/review_cubit.dart';
 import 'package:vrhaman/src/core/cubit/user_cubit.dart';
+import 'package:vrhaman/src/core/data/review_data_source.dart';
 import 'package:vrhaman/src/core/data/user_data_sources.dart';
 import 'package:vrhaman/src/core/repository/user_repository_imp.dart';
 import 'package:vrhaman/src/core/usecase/user_usecases.dart';
+import 'package:vrhaman/src/features/address/data/datasources/address_remote_data_source.dart';
+import 'package:vrhaman/src/features/address/presentation/cubit/address_cubit.dart';
 import 'package:vrhaman/src/features/auth/data/datasources/auth_remote_data_sources.dart';
 import 'package:vrhaman/src/features/auth/data/repositories/auth_repositories_impl.dart';
 import 'package:vrhaman/src/features/auth/domain/usecase/authUseCase.dart';
@@ -28,29 +32,19 @@ import 'package:vrhaman/src/features/vehicle_details/data/repositories/vehicle_d
 import 'package:vrhaman/src/features/vehicle_details/domain/usecase/vehicle_details_usecases.dart';
 import 'package:vrhaman/src/features/vehicle_details/data/datasources/vehicle_details_datasource.dart';
 import 'package:vrhaman/src/features/vehicle_details/presentation/bloc/vehicle_details_cubit.dart';
-import 'package:vrhaman/src/features/vehicle_details/presentation/pages/vehicle_details_screen.dart';
 import 'package:vrhaman/src/features/booking/presentation/cubit/booking_cubit.dart';
-import 'package:vrhaman/src/features/booking/presentation/screens/booking_success_screen.dart';
 import 'package:vrhaman/src/features/home/data/datasources/home_data_sources.dart';
 import 'package:vrhaman/src/features/home/data/repositories/home_repositories_imp.dart';
-import 'package:vrhaman/src/features/home/domain/usecases/home_usecases.dart';
 import 'package:vrhaman/src/features/home/presentation/bloc/home_cubit.dart';
 import 'package:vrhaman/src/features/home/presentation/pages/bottom_navigation_bar.dart';
-import 'package:vrhaman/src/features/home/home.dart';
-import 'package:vrhaman/src/features/home/presentation/pages/home_screen.dart';
-import 'package:vrhaman/src/features/review/review_cubit/review_cubit.dart';
 import 'package:vrhaman/src/features/wishlist/data/data_source/wishlist_datasource.dart';
 import 'package:vrhaman/src/features/wishlist/data/repositories/wishlist_repositories_imp.dart';
 import 'package:vrhaman/src/features/wishlist/domain/usecases/wishlist_usecases.dart';
 import 'package:vrhaman/src/features/wishlist/presentation/cubit/wishlist_cubit.dart';
 import 'package:vrhaman/themes/app_theme.dart';
-
 import 'features/auth/presentation/pages/login_screen.dart'; // Import the LoginScreen
 import 'features/auth/presentation/bloc/login_cubit.dart'; // Import the OtpCubit
-import 'sample_feature/sample_item_details_view.dart';
-import 'sample_feature/sample_item_list_view.dart';
 import 'settings/settings_controller.dart';
-import 'settings/settings_view.dart';
 
 /// The Widget that configures your application.
 class MyApp extends StatelessWidget {
@@ -101,8 +95,11 @@ class MyApp extends StatelessWidget {
                   ),
                 ),
                 BlocProvider<ReviewCubit>(
-                  create: (context) => ReviewCubit(),
+                  create: (context) => ReviewCubit(
+                    reviewDataSource: ReviewDataSourceImpl(),
+                  ),
                 ),
+
                 BlocProvider<BookingCubit>(
                   create: (context) => BookingCubit(
                     GetAllBookingVehiclesUseCase(BookingVehicleRepositoriesImpl(BookingVehicleDataSourceImpl())),
@@ -138,12 +135,18 @@ class MyApp extends StatelessWidget {
                     ),
                   ),
                 ),
+                BlocProvider<AddressCubit>(
+                  create: (context) => AddressCubit(
+                    addressRemoteDataSource: AddressRemoteDataSourceImpl(),
+                  ),
+                ),
               ],
               child: MaterialApp(
                 // Providing a restorationScopeId allows the Navigator built by the
                 // MaterialApp to restore the navigation stack when a user leaves and
                 // returns to the app after it has been killed while running in the
                 // background.
+
                 restorationScopeId: 'app',
               
                 // Provide the generated AppLocalizations to the MaterialApp. This

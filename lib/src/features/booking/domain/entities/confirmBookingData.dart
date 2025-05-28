@@ -14,6 +14,7 @@ class ConfirmBookingData {
   final DateTime endDate;
   final String duration;
   final int totalPrice;
+  final String paymentType;
 
   ConfirmBookingData({
     required this.id,
@@ -31,5 +32,6 @@ class ConfirmBookingData {
     required this.endDate,
     required this.duration,
     required this.totalPrice,
+    required this.paymentType,
   });
 }

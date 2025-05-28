@@ -73,9 +73,10 @@ basicBackgroundColor(BuildContext context) {
       : Colors.white;
 }
 
-const API_URL = 'http://192.168.1.11:5000/api/';
 
-const IMAGE_URL2 = 'http://192.168.1.11:5000/uploads/';
-const IMAGE_URL = 'http://192.168.1.11:5000/';
+const API_URL = 'https://backend.vrhaman.com:5000/api/';
 
-const SOCKET_URL = 'http://192.168.1.11:5000';
+const SOCKET_URL = 'https://backend.vrhaman.com:5000/';
+
+
+const String kgoogleApiKey = 'AIzaSyDSrg9xsCLGPGMeP-CqiTCKqO0-ZhYK1LA';

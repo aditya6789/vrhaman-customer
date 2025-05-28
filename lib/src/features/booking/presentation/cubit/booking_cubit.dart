@@ -78,6 +78,27 @@ class BookingCubit extends Cubit<BookingState> {
       emit(GetBookingsError(e.toString()));
     }
   }
+
+  Future<void> getBookingVehicleById(String id) async {
+    emit(BookingLoading());
+    try {
+      final result = await getAllBookingVehiclesUseCase.getBookingVehicleById(id);
+      result.fold(
+        (failure) {
+          print("booking error ${failure.message}");
+          emit(BookingError(failure.message));
+        },
+        (data) {
+          print("booking response $data");
+          emit(BookingSuccessVehicle(data));
+        },
+      );
+    } catch (e) {
+      print("booking error ${e}");
+      emit(BookingError(e.toString()));
+    }
+  }
+
 }
 
 abstract class BookingState {}
@@ -93,6 +114,11 @@ class BookingSuccess extends BookingState {
 class BookingSuccessAvailable extends BookingState {
   final BookingAvailable data;
   BookingSuccessAvailable(this.data);
+}
+
+class BookingSuccessVehicle extends BookingState {
+  final BookingVehicle data;
+  BookingSuccessVehicle(this.data);
 }
 
 class BookingError extends BookingState {

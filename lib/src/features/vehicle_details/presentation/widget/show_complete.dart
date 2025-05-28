@@ -3,7 +3,10 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:vrhaman/constants.dart';
 import 'package:vrhaman/src/features/profile/presentation/screens/account_information&edit_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-void completeProfile(BuildContext context) {
+
+void completeProfile(
+  BuildContext context,
+) {
   showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -31,17 +34,15 @@ void completeProfile(BuildContext context) {
                           context,
                           MaterialPageRoute(
                               builder: (context) =>
-                                  AccountInformationEditScreen()));
-
-                                // Navigator.pop(context);
+                                  AccountInformationEditScreen())).then((_) {
+                        Navigator.pop(context);
+                      });
                     },
                     child: const Text('Complete Profile')),
               ],
             ),
           )));
 }
-
-
 
 void completedocument(BuildContext context) {
   showModalBottomSheet(

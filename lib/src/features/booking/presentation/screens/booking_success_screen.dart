@@ -10,8 +10,10 @@ import 'package:vrhaman/constants.dart';
 import 'package:vrhaman/src/features/booking/domain/entities/confirmBookingData.dart';
 import 'package:vrhaman/src/features/home/presentation/pages/bottom_navigation_bar.dart';
 import 'package:vrhaman/src/utils/api_response.dart';
-import 'package:vrhaman/src/utils/user_preferences.dart';
+
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:vrhaman/src/utils/toast.dart';
+import 'package:vrhaman/src/utils/user_prefences.dart';
 
 class BookingSuccessScreen extends StatefulWidget {
   final ConfirmBookingData bookingDetails;
@@ -23,9 +25,8 @@ class BookingSuccessScreen extends StatefulWidget {
 }
 
 class _BookingSuccessScreenState extends State<BookingSuccessScreen> {
-  Timer? _pollingTimer;
   Timer? _countdownTimer;
-  int _remainingSeconds = 300; // 5 minutes
+  int _remainingSeconds = 600; // 10 minutes
   String _bookingStatus = 'Pending';
   bool _isPaymentComplete = false;
   final Razorpay _razorpay = Razorpay();
@@ -35,71 +36,41 @@ class _BookingSuccessScreenState extends State<BookingSuccessScreen> {
   @override
   void initState() {
     super.initState();
-    _startPolling();
     _startCountdown();
     _initializeRazorpay();
     _saveCurrentBooking();
-    initializeSocket();
+    _initializeSocket();
   }
 
-   Future<IO.Socket> initializeSocket() async {
-    print("Running socket");
-    final prefs = await SharedPreferences.getInstance();
-     final String token = prefs.getString('accessToken') ?? '';
-    print("Token: $token");
+  Future<void> _initializeSocket() async {
+    final user = await userPreferences.getUserId();
 
-     socket = IO.io(SOCKET_URL, <String, dynamic>{
+      final prefs = await SharedPreferences.getInstance();
+     final String token = prefs.getString('accessToken') ?? '';
+       socket = IO.io(
+    SOCKET_URL,
+    <String, dynamic>{
       'transports': ['websocket'],
+      'forceNew': true, // Create a new connection instance each time
+      'autoConnect': true,
       'auth': {
         'token': token,
       },
-      'autoConnect': true,
-      'connectTimeout': 30000, // 30 seconds timeout
       'reconnection': true,
       'reconnectionDelay': 1000,
-      'reconnectionAttempts': 5,
-    });
-
-   
-
-    _setupSocketListeners();
+      'reconnectionDelayMax': 5000,
+      'reconnectionAttempts': 10, // Increased attempts for reliability
+      'timeout': 30000, // 30 seconds timeout for initial connection
+      // Ping settings to help keep the connection alive
+      'pingInterval': 25000, // Adjust based on your server config
+      'pingTimeout': 60000,   // Adjust based on your server config
+    },
+  );
 
     socket.connect();
-     socket.onConnectError((error) {
-  print('Connection error: $error');
-  // Implement retry logic here
-  Future.delayed(Duration(seconds: 3), () {
-    if (!socket.connected) {
-      print('Retrying connection...');
-      socket.connect();
-    }
-  });
-});
 
-socket.onReconnectAttempt((attempt) {
-  print('Reconnect attempt: $attempt');
-  socket = IO.io('http://10.0.2.2:5000', <String, dynamic>{
-    'transports': ['websocket'],
-    'auth': {
-      'token': token,
-    },
-    'autoConnect': false,
-  });
-});
-
-    return socket;
-  }
-
-   void _setupSocketListeners() async {
-    
-    
-    print("Socket connected: ${socket.connected}");
-
-    final user = await userPreferences.getUserId();
-    
     socket.onConnect((_) {
       print('Connected to server');
-      // Register vendor
       socket.emit('register-customer', {
         "customerId": user,
         "role": 'customer',
@@ -120,44 +91,43 @@ socket.onReconnectAttempt((attempt) {
 
     socket.on('bookingUpdate', (data) {
       print('New booking update: $data');
-      if (data != null ) {
-        // _showBookingDialog(data);
+      if (data != null && data['_id'] == widget.bookingDetails.id) {
+        print("Booking update data: ${data}");
+        setState(() {
+          _bookingStatus = data['status'];
+        });
+        
+        if (_bookingStatus == 'Accepted') {
+          _resetTimer(); // Reset timer for payment
+        } else if (_bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled' || _bookingStatus == 'Rejected') {
+          _stopCountdown();
+          _clearCurrentBooking();
+        }
       }
     });
 
-    socket!.onDisconnect((_) {
+    socket.onDisconnect((_) {
       print('Socket Disconnected');
     });
   }
 
-   void disconnect() {
-    socket?.disconnect();
-    // socket = null;
+  void disconnect() {
+    socket.disconnect();
   }
 
   void _saveCurrentBooking() async {
     if (_bookingStatus != 'Confirmed' && _bookingStatus != 'Cancelled') {
-      await UserPreferences().setActiveBookingId(widget.bookingDetails.id);
+      // await UserPreferences().setActiveBookingId(widget.bookingDetails.id);
     }
   }
 
   void _clearCurrentBooking() async {
-    await UserPreferences().setActiveBookingId(null);
+    // await UserPreferences().setActiveBookingId(null);
   }
 
   void _initializeRazorpay() {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-  }
-
-  void _startPolling() {
-    _pollingTimer = Timer.periodic(Duration(seconds: 5), (timer) async {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      await _checkBookingStatus();
-    });
   }
 
   void _startCountdown() {
@@ -177,41 +147,18 @@ socket.onReconnectAttempt((attempt) {
     });
   }
 
-  Future<void> _checkBookingStatus() async {
-    if (!mounted) return;
-    
-    try {
-      final response = await getRequest('booking/customer/send-booking/${widget.bookingDetails.id}');
-      
-      if (response.statusCode == 200) {
-        final status = response.data['data']['status'];
-        if (!mounted) return;
-        
-        setState(() {
-          _bookingStatus = status;
-        });
-
-        if (status == 'Accepted') {
-          _stopPolling(); // Stop polling when status is Accepted
-          _resetTimer(); // Reset timer for payment
-        } else if (status == 'Confirmed' || status == 'Cancelled') {
-          _stopPolling();
-          _clearCurrentBooking(); // Clear the active booking ID
-        }
-      }
-    } catch (e) {
-      print('Error checking booking status: $e');
-    }
-  }
-
   void _resetTimer() {
     if (!mounted) return;
     
     _countdownTimer?.cancel();
     setState(() {
-      _remainingSeconds = 300; // Reset to 5 minutes
+      _remainingSeconds = 600; // Reset to 5 minutes
     });
     _startCountdown();
+  }
+
+  void _stopCountdown() {
+    _countdownTimer?.cancel();
   }
 
   Future<void> _cancelBooking() async {
@@ -224,17 +171,15 @@ socket.onReconnectAttempt((attempt) {
       setState(() {
         _bookingStatus = 'Cancelled';
       });
-      _stopPolling();
     } catch (e) {
       print('Error cancelling booking: $e');
     }
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    
     print('handle payment success ${response.data}');
     if (!mounted) return;
-
-   
 
     try {
       await postRequest('payment/success', {
@@ -242,68 +187,45 @@ socket.onReconnectAttempt((attempt) {
         'booking_id': widget.bookingDetails.id,
         'amount': widget.bookingDetails.totalPrice,
         'status': 'Confirmed',
-
-
       });
       if (!mounted) return;
-      
-      // setState(() {
-      //   _isPaymentComplete = true;
-      //   _bookingStatus = 'Completed';
-      // });
-      _stopPolling();
     } catch (e) {
       print('Error updating payment status: $e');
     }
 
     _updateBookingStatus('Confirmed', response.paymentId ?? '');
-    
   }
 
-  
-  void _updateBookingStatus(String status , String paymentId) async {
-
+  void _updateBookingStatus(String status, String paymentId) async {
     try {
       final response = await patchRequest('booking/customer/', {
-        'status': status,
+        'status': 'Confirmed',
         'payment_id': paymentId,
         'booking_id': widget.bookingDetails.id,
-        
       });
       if (response.statusCode == 200) {
+        print('Booking status updated to ${response.data}');
         setState(() {
           _bookingStatus = status;
         });
       }
     } catch (e) {
       print('Error updating booking status: $e');
-      
     }
     setState(() {
       _bookingStatus = status;
     });
   }
 
-
   void _handlePaymentError(PaymentFailureResponse response) {
     print('Payment failed: ${response.message}');
   }
 
   Future<bool> _onWillPop() async {
-    if (_bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled') {
+    if (_bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled' || _bookingStatus == 'Rejected') {
       return true;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Please wait until booking is confirmed or cancelled'),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
-        margin: EdgeInsets.all(16.w),
-      ),
-    );
+   showToast('Please wait until booking is confirmed or cancelled or rejected' , isSuccess: false);
     return false;
   }
 
@@ -315,24 +237,26 @@ socket.onReconnectAttempt((attempt) {
 
   @override
   void dispose() {
-    _stopPolling();
+    _stopCountdown();
     _razorpay.clear();
+    disconnect();
     super.dispose();
-  }
-
-  void _stopPolling() {
-    _pollingTimer?.cancel();
-    _countdownTimer?.cancel();
-    _pollingTimer = null;
-    _countdownTimer = null;
   }
 
   void _makePayment() {
     if (!mounted) return;
+    var amount = (widget.bookingDetails.totalPrice *100).toInt(); // Convert to paise
+    if(widget.bookingDetails.paymentType == 'partial'){
+      setState(() {
+        amount = ((widget.bookingDetails.totalPrice * 0.2) * 100).toInt(); // 20% in paise
+      });
+    }
+    print('booking details: ${widget.bookingDetails.paymentType}');
+    print('payment amount: $amount');
     
     var options = {
-      'key': 'rzp_test_j7QHEzEapiwVwQ',
-      'amount': (widget.bookingDetails.totalPrice * 100).toInt(),
+      'key': 'rzp_live_jkdw3rMi0JwTiT', 
+      'amount': amount, // Amount in paise
       'name': 'Vrhaman',
       'description': 'Vehicle Booking Payment',
       'prefill': {
@@ -354,44 +278,30 @@ socket.onReconnectAttempt((attempt) {
       onWillPop: _onWillPop,
       child: Scaffold(
         backgroundColor: Colors.grey[50],
-        appBar: _bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled'
+        appBar: _bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled' || _bookingStatus == 'Rejected'
           ? AppBar(
               elevation: 0,
               backgroundColor: Colors.transparent,
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+             
             )
           : null,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
               padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   // Status Section
                   Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(vertical: 24.h),
-                    // decoration: BoxDecoration(
-                    //   color: Colors.white,
-                    //   borderRadius: BorderRadius.circular(16.r),
-                    //   boxShadow: [
-                    //     BoxShadow(
-                    //       color: Colors.black.withOpacity(0.03),
-                    //       blurRadius: 10,
-                    //       offset: Offset(0, 5),
-                    //     ),
-                    //   ],
-                    // ),
-                  child: Column(
-                    children: [
+                    child: Column(
+                      children: [
                         _buildStatusIcon(),
                         SizedBox(height: 16.h),
                         _buildStatusText(),
-                        if (_bookingStatus != 'Confirmed' && _bookingStatus != 'Cancelled')
+                        if (_bookingStatus != 'Confirmed' && _bookingStatus != 'Cancelled' && _bookingStatus != 'Rejected')
                           Padding(
                             padding: EdgeInsets.only(top: 12.h),
                             child: Container(
@@ -406,7 +316,7 @@ socket.onReconnectAttempt((attempt) {
                                 children: [
                                   Icon(Icons.timer_outlined, color: Colors.orange, size: 18.sp),
                                   SizedBox(width: 8.w),
-                      Text(
+                                  Text(
                                     'Time remaining: ${_formatTime(_remainingSeconds)}',
                                     style: TextStyle(
                                       fontSize: 13.sp,
@@ -417,16 +327,19 @@ socket.onReconnectAttempt((attempt) {
                                 ],
                               ),
                             ),
-                      ),
-                    ],
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(height: 24.h),
+                  SizedBox(height: 24.h),
+
+                  _buildActionButton(),
+                  SizedBox(height: 24.h),
 
                   // Booking Reference
-                    Container(
+                  Container(
                     padding: EdgeInsets.all(16.w),
-                  decoration: BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12.r),
                       boxShadow: [
@@ -458,7 +371,7 @@ socket.onReconnectAttempt((attempt) {
                                 color: Colors.grey[600],
                               ),
                             ),
-                        Text(
+                            Text(
                               widget.bookingDetails.id.substring(0, 8).toUpperCase(),
                               style: TextStyle(
                                 fontSize: 15.sp,
@@ -561,7 +474,7 @@ socket.onReconnectAttempt((attempt) {
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
-                          children: [
+                            children: [
                               _buildTechnologyCard(
                                 Icons.security_outlined,
                                 'Secure Payments',
@@ -655,7 +568,7 @@ socket.onReconnectAttempt((attempt) {
                     ),
 
                   SizedBox(height: 24.h),
-                  _buildActionButton(),
+                  
                   SizedBox(height: 16.h),
                 ],
               ),
@@ -730,7 +643,7 @@ socket.onReconnectAttempt((attempt) {
         ],
       ),
       child: Row(
-                  children: [
+        children: [
           Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
@@ -740,7 +653,7 @@ socket.onReconnectAttempt((attempt) {
             child: Icon(icon, color: primaryColor, size: 18.sp),
           ),
           SizedBox(width: 16.w),
-                    Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -786,6 +699,10 @@ socket.onReconnectAttempt((attempt) {
         icon = Icons.access_time;
         color = Colors.orange;
         break;
+      case 'Rejected':
+        icon = Icons.cancel;
+        color = Colors.red;
+        break;
       default:
         icon = HugeIcons.strokeRoundedTime04;
         color = Colors.blue;
@@ -805,6 +722,9 @@ socket.onReconnectAttempt((attempt) {
         break;
       case 'Accepted':
         message = 'Booking Accepted\nPlease make payment';
+        break;
+      case 'Rejected':
+        message = 'Booking Rejected';
         break;
       default:
         message = 'Waiting for confirmation...';
@@ -837,11 +757,11 @@ socket.onReconnectAttempt((attempt) {
           ),
         ),
       );
-    } else if (_bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled') {
+    } else if (_bookingStatus == 'Confirmed' || _bookingStatus == 'Cancelled' || _bookingStatus == 'Rejected') {
       return Container(
         width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
+        child: ElevatedButton(
+          onPressed: () {
             _clearCurrentBooking(); // Clear active booking before navigation
             Navigator.pushAndRemoveUntil(
               context,

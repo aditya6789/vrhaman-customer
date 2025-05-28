@@ -8,11 +8,14 @@ import 'package:google_fonts/google_fonts.dart';
 class InformationCardWidget extends StatelessWidget {
   final SearchData search;
   final VoidCallback onTap;
+  final String duration;
   const InformationCardWidget({
     super.key,
     required this.search,
     required this.onTap,
+    required this.duration,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +50,7 @@ class InformationCardWidget extends StatelessWidget {
                       image: DecorationImage(
                         image: NetworkImage(
                           search.vehicleImage.isNotEmpty
-                              ? '$IMAGE_URL${search.vehicleImage[0]}'
+                              ? search.vehicleImage[0]
                               : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtc3-y63KN_r5LwOC9PNqpwc5C1JPeN36_ug&s',
                         ),
                         fit: BoxFit.cover,
@@ -92,8 +95,8 @@ class InformationCardWidget extends StatelessWidget {
                       ),
                       SizedBox(width: 8.w),
                       _buildTag(
-                        icon: HugeIcons.strokeRoundedUser,
-                        label: "User Choice",
+                        icon: HugeIcons.strokeRoundedNavigation04,
+                        label: search.distance.toString() ,
                         color: Colors.orange,
                       ),
                     ],
@@ -148,7 +151,7 @@ class InformationCardWidget extends StatelessWidget {
                             ),
                             SizedBox(width: 4.w),
                             Text(
-                              '4.5',
+                              search.averageRating.toString(),
                               style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
@@ -190,20 +193,22 @@ class InformationCardWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '₹${search.price}/hour',
+                            '₹${duration == 'Day' ? search.dailyPrice : duration == 'Week' ? search.weeklyPrice : search.monthlyPrice}/${duration == 'Day' ? 'day' : duration == 'Week' ? 'week' : 'month'}',
                             style: GoogleFonts.poppins(
                               fontSize: 20.sp,
                               fontWeight: FontWeight.w600,
                               color: primaryColor,
                             ),
                           ),
+
                           Text(
-                            '₹2000/day',
+                            '₹${duration == 'Days' ? search.dailyPrice : duration == 'Weeks' ? search.weeklyPrice : search.monthlyPrice}/day',
                             style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               color: Colors.grey[400],
                               decoration: TextDecoration.lineThrough,
                             ),
+
                           ),
                         
                         ],

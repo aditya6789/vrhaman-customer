@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:vrhaman/constants.dart';
+import 'package:vrhaman/src/utils/launch_url.dart';
 
 class VehicleLocationWidget extends StatelessWidget {
   final String pickupLocation;
@@ -76,6 +77,7 @@ class VehicleLocationWidget extends StatelessWidget {
               child: InkWell(
                 borderRadius: BorderRadius.circular(12.r),
                 onTap: () {
+                  launchGoogleMaps(pickupLocation);
                   // TODO: Implement navigation
                 },
                 child: Container(

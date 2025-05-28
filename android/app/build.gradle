@@ -1,3 +1,7 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+
 plugins {
     id "com.android.application"
     // START: FlutterFire Configuration
@@ -7,9 +11,15 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 
 android {
-    namespace = "com.example.vrhaman"
+    namespace = "com.vrhaman.vrhaman"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -23,18 +33,29 @@ android {
         jvmTarget = '1.8'
     }
 
+
     defaultConfig {
-        applicationId "com.example.vrhaman"
+        applicationId "com.vrhaman.vrhaman"
         minSdkVersion 23
         targetSdkVersion flutter.targetSdkVersion
-        versionCode 1
+        versionCode 4
         versionName "1.0"
         multiDexEnabled true
+        
+    }
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword keystoreProperties['storePassword']
+        }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             minifyEnabled true
             shrinkResources true

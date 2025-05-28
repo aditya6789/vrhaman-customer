@@ -33,7 +33,11 @@ class _ProfileInfoCardWidgetState extends State<ProfileInfoCardWidget> {
         Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => AccountInformationEditScreen()));
+                builder: (context) => AccountInformationEditScreen())).then(
+                  (value) {
+                    _loadUserData();
+                  }
+                );
       },
       child: Container(
         padding: EdgeInsets.all(16),
@@ -49,14 +53,19 @@ class _ProfileInfoCardWidgetState extends State<ProfileInfoCardWidget> {
             ),
           ],
         ),
-        child:  ListTile(
-          leading:const CircleAvatar(
-            backgroundImage: NetworkImage(
-                'https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'), // Replace with your image URL
+        child: ListTile(
+          title: Text(
+            userData != null && userData!['name'] != null && userData!['name'].toString().isNotEmpty 
+              ? userData!['name'] 
+              : 'Unknown', 
+            style: mediumTextStyle.copyWith(color: Colors.black, fontWeight: FontWeight.bold)
           ),
-          title:  Text(userData?['name'].isEmpty ? 'Unknown' : userData?['name'] ?? 'Unknown', style: mediumTextStyle.copyWith(color: Colors.black , fontWeight: FontWeight.bold)),
-          subtitle: Text(userData?['email'].isEmpty ? 'unknown@gmail.com' : userData?['email'] ?? 'unknown@gmail.com',
-              style: smallTextStyle.copyWith(color: Colors.grey)),
+          subtitle: Text(
+            userData != null && userData!['email'] != null && userData!['email'].toString().isNotEmpty 
+              ? userData!['email'] 
+              : 'unknown@gmail.com',
+            style: smallTextStyle.copyWith(color: Colors.grey)
+          ),
         ),
       ),
     );

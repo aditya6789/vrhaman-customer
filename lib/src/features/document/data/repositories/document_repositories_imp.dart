@@ -11,9 +11,19 @@ class DocumentRepositoryImpl implements DocumentRepository {
   DocumentRepositoryImpl({required this.dataSource});
 
   @override
-   Future<Either<Failure, DocumentData>> uploadDocument(DocumentData documentData) async {
+   Future<Either<Failure, DocumentDataModel>> uploadDocument(DocumentData documentData) async {
     try {
-      final result = await dataSource.uploadDocument(DocumentDataModel(image: documentData.image)); // Replace 'some_id' with the actual id
+      final result = await dataSource.uploadDocument(documentData);
+      return Right(result);
+    } catch (e) {
+      return Left(Failure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, DocumentDataModel>> updateDocument(DocumentData documentData) async {
+    try {
+      final result = await dataSource.updateDocument(documentData);
       return Right(result);
     } catch (e) {
       return Left(Failure(e.toString()));

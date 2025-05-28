@@ -50,21 +50,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCspHZKKykdiODu-OcgSSjB7my_1h42EiY',
-    appId: '1:1080326665784:android:4560485983c736e8c918cd',
-    messagingSenderId: '1080326665784',
-    projectId: 'vrhaman-f6289',
-    databaseURL: 'https://vrhaman-f6289-default-rtdb.firebaseio.com',
-    storageBucket: 'vrhaman-f6289.firebasestorage.app',
+    apiKey: 'AIzaSyAmP38Lzv6G4fsDGTF7wDY8KLW8ahbvGgU',
+    appId: '1:675182789195:android:d4e4c5b04e4f688227c3ce',
+    messagingSenderId: '675182789195',
+    projectId: 'vrhaman-vendor',
+    storageBucket: 'vrhaman-vendor.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDse7CyP8LvlqUaRtHJUf0VzGOqmFtcBaI',
-    appId: '1:1080326665784:ios:706b17ce4687ea44c918cd',
-    messagingSenderId: '1080326665784',
-    projectId: 'vrhaman-f6289',
-    databaseURL: 'https://vrhaman-f6289-default-rtdb.firebaseio.com',
-    storageBucket: 'vrhaman-f6289.firebasestorage.app',
+    apiKey: 'AIzaSyD4hJD1ALAIrmaEzqZ5MqOq-_c3j79iPyM',
+    appId: '1:675182789195:ios:a7a179430993207227c3ce',
+    messagingSenderId: '675182789195',
+    projectId: 'vrhaman-vendor',
+    storageBucket: 'vrhaman-vendor.firebasestorage.app',
     iosBundleId: 'com.example.vrhaman',
   );
+
 }

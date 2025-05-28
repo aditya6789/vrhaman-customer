@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:vrhaman/constants.dart';
 import 'package:vrhaman/src/models/prediction.dart';
 
-import 'package:vrhaman/src/utils/google_api.dart';
 
-const kGoogleApiKey = 'AIzaSyCdXyAkWjkhUlWXBbpkieWRi2OV47AbVFE';
+
+
 
 Future<List<Prediction>> fetchSuggestions(String input) async {
   final sessionToken = UniqueKey().toString();
   final request =
-      'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&types=geocode|establishment&components=country:in&key=$kGoogleApiKey&sessiontoken=$sessionToken';
+      'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&types=geocode|establishment&components=country:in&key=${kgoogleApiKey}&sessiontoken=$sessionToken';
 
   final response = await http.get(Uri.parse(request));
 

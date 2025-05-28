@@ -71,7 +71,7 @@ class OtpCubit extends Cubit<OtpState> {
     final result = await verificationUseCase(params);
 
     result.fold(
-      (failure) => emit(OtpValidationFailure(failure.message)),
+      (failure) => emit(OtpValidationFailure('Invalid OTP')),
       (verification) async {
         // final userData = verification.userData;
         // final accessToken = verification.accessToken;

@@ -16,8 +16,10 @@ class SearchResultScreen extends StatefulWidget {
   final String location;
   final String date;
   final String time;
+  final String duration;
 
-  const SearchResultScreen({super.key, required this.search, required this.location, required this.date, required this.time});
+  const SearchResultScreen({super.key, required this.search, required this.location, required this.date, required this.time, required this.duration});
+
 
   @override
   State<SearchResultScreen> createState() => _SearchResultScreenState();
@@ -111,12 +113,48 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
                             onSortOptionSelected: (sortOption) {
                               setState(() {
                                 if (sortOption == 'Price - Low to High') {
-                                  widget.search.sort((a, b) => a.price.compareTo(b.price));
+                                  widget.search.sort((a, b) {
+                                    int priceA = widget.duration == 'Days' ? a.dailyPrice : 
+                                                widget.duration == 'Weeks' ? a.weeklyPrice : a.monthlyPrice;
+                                    int priceB = widget.duration == 'Days' ? b.dailyPrice :
+                                                widget.duration == 'Weeks' ? b.weeklyPrice : b.monthlyPrice;
+                                    return priceA.compareTo(priceB);
+                                  });
+
                                 } else if (sortOption == 'Price - High to Low') {
-                                  widget.search.sort((a, b) => b.price.compareTo(a.price));
-                                } else if (sortOption == 'Ratings - High to Low') ;
+                                  widget.search.sort((a, b) {
+                                    int priceA = widget.duration == 'Days' ? a.dailyPrice :
+                                                widget.duration == 'Weeks' ? a.weeklyPrice : a.monthlyPrice;
+                                    int priceB = widget.duration == 'Days' ? b.dailyPrice :
+                                                widget.duration == 'Weeks' ? b.weeklyPrice : b.monthlyPrice;  
+
+                                                widget.duration == 'Weekly' ? b.weeklyPrice : b.monthlyPrice;
+                                    return priceB.compareTo(priceA);
+                                  });
+                                } else if (sortOption == 'Ratings - High to Low') {
+                                  widget.search.sort((a, b) {
+                                    return b.averageRating.compareTo(a.averageRating);
+                                  });
+                                }else if (sortOption == 'Ratings - Low to High') {
+                                  widget.search.sort((a, b) {
+                                    return a.averageRating.compareTo(b.averageRating);
+                                  });
+                                }else if (sortOption == 'Distance - Low to High') {
+                                  widget.search.sort((a, b) {
+                                    return a.distance.compareTo(b.distance);
+                                  });
+                                }else if (sortOption == 'Distance - High to Low') {
+                                  widget.search.sort((a, b) {
+                                    return b.distance.compareTo(a.distance);
+                                  });
+                                }
+
+
+
                               });
                             },
+
+
                           ),
                         );
                       },
@@ -140,10 +178,13 @@ class _SearchResultScreenState extends State<SearchResultScreen> {
                       onTap: () {
                         // Navigator.push(context, MaterialPageRoute(builder: (context) => VehicleDetailsScreen()));
                       },
-                      child: InformationCardWidget(search: searchData, onTap: () {
+                      child: InformationCardWidget(
+                        duration: widget.duration,
+                        search: searchData, onTap: () {
                         Navigator.push(context, MaterialPageRoute(builder: (context) => VehicleDetailsScreen(vehicleId: searchData.id)));
                       }),
                     );
+
                   }).toList(),
                 ),
               ],

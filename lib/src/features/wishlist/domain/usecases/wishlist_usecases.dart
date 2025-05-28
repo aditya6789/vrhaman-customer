@@ -16,4 +16,7 @@ class AddWishlistUseCase {
   Future<Either<Failure, List<Wishlist>>> getWishlist() async {
     return await repository.getWishlist();
   }
+  Future<Either<Failure, void>> deleteWishlist(String vehicleId) async {
+    return await repository.deleteWishlist(vehicleId);
+  }
 }

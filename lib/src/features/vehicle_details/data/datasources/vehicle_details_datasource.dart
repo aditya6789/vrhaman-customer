@@ -20,12 +20,13 @@ class VehicleDetailsDataSourceImpl implements VehicleDetailsDataSource {
     try {
       
       final response = await getRequest('vehicles/vehicle-details?id=$vehicleId');
-      print('response 2: ${response.data}');
+      print('response 2: ${response.data['data']['privacyPolicy']}');
+
       // print('response 2: ${response.data}');
       if (response.statusCode == 200) {
   if (response.data != null && response.data['data'] != null && response.data['data']['vendorVehicle'] != null) {
-    print('response: ${response.data['data']['vendorVehicle']}');
-    return VehicleDetailsModel.fromJson(response.data['data']['vendorVehicle'] as Map<String, dynamic>);
+    print('vehicleDetails: ${response.data['data']['vendorVehicle']}');
+    return VehicleDetailsModel.fromJson(response.data['data'] as Map<String, dynamic>);
   } else {
     throw ServerException('Unexpected response structure');
   }

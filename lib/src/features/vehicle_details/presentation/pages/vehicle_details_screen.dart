@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:vrhaman/constants.dart';
 import 'package:vrhaman/src/common/loading.dart';
+import 'package:vrhaman/src/core/cubit/review_cubit.dart';
 import 'package:vrhaman/src/features/booking/presentation/screens/booking_screen.dart';
 import 'package:vrhaman/src/features/booking/presentation/screens/booking_success_screen.dart';
-import 'package:vrhaman/src/features/review/review_cubit/review_cubit.dart';
 import 'package:vrhaman/src/features/vehicle_details/domain/entities/vehicleDetails.dart';
 import 'package:vrhaman/src/features/vehicle_details/presentation/bloc/vehicle_details_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,6 +16,8 @@ import 'package:vrhaman/src/features/vehicle_details/presentation/widget/vehicle
 import 'package:vrhaman/src/features/vehicle_details/presentation/widget/vehicle_location_widget.dart';
 import 'package:vrhaman/src/features/vehicle_details/presentation/widget/vehicle_review_widget.dart';
 import 'package:vrhaman/src/features/vehicle_details/presentation/widget/vehicle_specification_widget.dart';
+import 'package:vrhaman/src/features/wishlist/domain/entities/addWishlist.dart';
+import 'package:vrhaman/src/features/wishlist/presentation/cubit/wishlist_cubit.dart';
 import 'package:vrhaman/src/utils/api_response.dart';
 import 'package:vrhaman/src/utils/user_prefences.dart';
 
@@ -27,13 +29,17 @@ class VehicleDetailsScreen extends StatefulWidget {
 }
 
 class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
+  bool isInWishlist = false;
+  late AnimationController _controller;
+  
+
   @override
   void initState() {
     super.initState();
     checkdocumentRequest();
     BlocProvider.of<VehicleDetailsCubit>(context)
         .fetchVehicleDetails(widget.vehicleId);
-    BlocProvider.of<ReviewCubit>(context).getVehicleReviews(widget.vehicleId);
+    BlocProvider.of<ReviewCubit>(context).getReviews(widget.vehicleId);
   }
 
   Future<void> checkdocumentRequest() async {
@@ -47,24 +53,31 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   }
 
   Future<void> checkUserProfile(VehicleDetails vehicleModel) async {
-    // Navigator.push(context, MaterialPageRoute(builder: (context) => BookingScreen(vehicleId: widget.vehicleId, vehicleDetails: vehicleModel,)));
     final user = UserPreferences();
     final userData = await user.getUserData();
-    // final document = await getDocument();
-    print(userData);
-    if (mounted &&
-        userData?['_id'] != null || userData?['_id'] != '' &&
-        userData?['name'] != null || userData?['name'] != '' &&
-        userData?['phone'] != null || userData?['phone'] != '' &&
-        userData?['email'] != null || userData?['email'] != '' &&
-        userData?['gender'] != null || userData?['gender'] != '') {
+    print('userData: ${userData}');
+
+    if (mounted && 
+        userData != null &&
+        userData['_id'] != null && 
+        userData['_id'].toString().isNotEmpty &&
+        userData['name'] != null &&
+        userData['name'].toString().isNotEmpty &&
+        userData['phone'] != null &&
+        userData['phone'].toString().isNotEmpty &&
+        userData['email'] != null &&
+        userData['email'].toString().isNotEmpty &&
+        userData['gender'] != null &&
+        userData['gender'].toString().isNotEmpty) {
       Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => BookingScreen(
-                    vehicleId: widget.vehicleId,
-                    vehicleDetails: vehicleModel,
-                  )));
+        context,
+        MaterialPageRoute(
+          builder: (context) => BookingScreen(
+            vehicleId: widget.vehicleId,
+            vehicleDetails: vehicleModel,
+          )
+        )
+      );
     } else {
       completeProfile(context);
     }
@@ -73,6 +86,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      
       backgroundColor: Colors.grey[50],
       body: BlocBuilder<VehicleDetailsCubit, VehicleDetailsState>(
         builder: (context, state) {
@@ -114,14 +128,23 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                       ),
                       actions: [
                         IconButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            setState(() {
+                        isInWishlist = !isInWishlist;
+                      });
+                      _controller.forward().then((_) {
+                        _controller.reverse();
+                      });
+                      context.read<WishlistCubit>().addWishlist(AddWishlist(vehicleId: widget.vehicleId));
+
+                          },
                           icon: Container(
                             padding: EdgeInsets.all(8.r),
                             decoration: BoxDecoration(
-                              color: Colors.grey[100],
+                              color: isInWishlist ? Colors.red : Colors.grey[100],
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.favorite_border_rounded, color: Colors.black87, size: 20.sp),
+                            child: Icon(isInWishlist ? Icons.favorite : Icons.favorite_border_rounded, color: isInWishlist ? Colors.white : Colors.black87, size: 20.sp),
                           ),
                         ),
                         SizedBox(width: 8.w),
@@ -203,7 +226,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                 Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: VehicleLocationWidget(
-                                    pickupLocation: vehicleModel.bussinessAddress,
+                                    pickupLocation: vehicleModel.pickupAddress,
                                   ),
                                 ),
                             
@@ -276,16 +299,18 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                               SizedBox(height: 16.h),
                                   _buildPolicyItem(
                                     'Cancellation Policy',
-                                    'This Booking is non-refundable',
-                                    'Non-refundable booking amount',
+                                   
+                                    vehicleModel.cancellationPolicy,
+                                    'Cancellation Policy',
                                     Icons.cancel_outlined,
                                     Colors.red,
                                   ),
                               SizedBox(height: 16.h),
                                   _buildPolicyItem(
                                     'Rules & Restrictions',
-                                    'Important guidelines for your ride',
-                                    '• Valid ID proof required\n• Maximum 2 persons allowed\n• Helmet is mandatory',
+                                    vehicleModel.privacyPolicy.split(',').join(',\n'),
+                                    // vehicleModel.privacyPolicy,
+                                    'Rules & Restrictions',
                                     Icons.rule_folder_outlined,
                                     Colors.blue,
                                   ),
@@ -300,6 +325,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 ),
 
                 // Bottom Book Now Button
+                if(vehicleModel.availabilityStatus == 'Available')
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -401,20 +427,6 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
           ],
         ),
-        if (description.isNotEmpty) ...[
-          SizedBox(height: 12.h),
-          Padding(
-            padding: EdgeInsets.only(left: 44.w),
-            child: Text(
-              description,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Colors.grey[600],
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
       ],
     );
   }

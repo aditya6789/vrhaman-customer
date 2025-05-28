@@ -90,37 +90,7 @@ class _BookedTopWidgetState extends State<BookedTopWidget> {
               ),
             ),
           ),
-          SizedBox(width: 12.w),
-          MouseRegion(
-            onEnter: (_) => setState(() => isFilterHovered = true),
-            onExit: (_) => setState(() => isFilterHovered = false),
-            child: Container(
-              padding: EdgeInsets.all(12.w),
-              decoration: BoxDecoration(
-                color: isFilterHovered ? primaryColor : Colors.white,
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                  color: isFilterHovered ? primaryColor : Colors.grey[200]!,
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isFilterHovered 
-                      ? primaryColor.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.05),
-                    blurRadius: isFilterHovered ? 12 : 8,
-                    offset: Offset(0, isFilterHovered ? 6 : 4),
-                    spreadRadius: isFilterHovered ? 2 : 0,
-                  ),
-                ],
-              ),
-              child: Icon(
-                HugeIcons.strokeRoundedFilter,
-                color: isFilterHovered ? Colors.white : Colors.grey[600],
-                size: 20.sp,
-              ),
-            ),
-          ),
+        
         ],
       ),
     );

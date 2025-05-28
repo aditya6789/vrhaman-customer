@@ -7,6 +7,9 @@ class BookingVehicle {
   final String vendorId;
   final String vendorBusinessName;
   final String vendorBusinessAddress;
+  final String pickupAddress;
+  final double pickupLatitude;
+  final double pickupLongitude;
   final String vendorPhone;
   final String vendorAlternativePhone;
   final String payment_type;
@@ -30,6 +33,9 @@ class BookingVehicle {
     required this.vendorBusinessAddress,
     required this.vendorPhone,
     required this.vendorAlternativePhone,
+    required this.pickupAddress,
+    required this.pickupLatitude,
+    required this.pickupLongitude,
     required this.startDate,
     required this.startTime,
     required this.payment_type,

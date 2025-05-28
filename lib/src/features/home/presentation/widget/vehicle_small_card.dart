@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:vrhaman/constants.dart';
+import 'package:vrhaman/src/features/home/domain/entities/vehicle.dart';
 import 'package:vrhaman/src/features/vehicle_details/presentation/pages/vehicle_details_screen.dart';
 import 'package:vrhaman/src/features/wishlist/domain/entities/addWishlist.dart';
 import 'package:vrhaman/src/features/wishlist/presentation/cubit/wishlist_cubit.dart';
@@ -11,19 +12,11 @@ import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 
 class VehicleSmallCard extends StatefulWidget {
-  final String vehicleId;
-  final String image;
-  final String name;
-  final String price;
-  final String description;
+ final Vehicle vehicle;
 
   const VehicleSmallCard({
     Key? key,
-    required this.vehicleId,
-    required this.image,
-    required this.name,
-    required this.price,
-    required this.description,
+  required this.vehicle,
   }) : super(key: key);
 
   @override
@@ -64,7 +57,7 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => VehicleDetailsScreen(vehicleId: widget.vehicleId),
+            builder: (context) => VehicleDetailsScreen(vehicleId: widget.vehicle.id),
           ),
         );
       },
@@ -98,11 +91,14 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                     ).createShader(bounds),
                     blendMode: BlendMode.darken,
                     child: Image.network(
-                      widget.image,
+                      widget.vehicle.images.isNotEmpty 
+                        ? widget.vehicle.images[0]
+                        : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtc3-y63KN_r5LwOC9PNqpwc5C1JPeN36_ug&s',
                       height: 150.h,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
+
                         return Container(
                           height: 180.h,
                           color: Colors.grey[200],
@@ -124,7 +120,8 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                       _controller.forward().then((_) {
                         _controller.reverse();
                       });
-                      context.read<WishlistCubit>().addWishlist(AddWishlist(vehicleId: widget.vehicleId));
+                      context.read<WishlistCubit>().addWishlist(AddWishlist(vehicleId: widget.vehicle.id));
+
                     },
                     child: AnimatedBuilder(
                       animation: _controller,
@@ -168,9 +165,10 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.9),
+                      color: widget.vehicle.availabilityStatus == 'Available' ? Colors.green.withOpacity(0.9) : Colors.red.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20.r),
                     ),
+
                     child: Row(
                       children: [
                         Icon(
@@ -180,12 +178,13 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                         ),
                         SizedBox(width: 4.w),
                         Text(
-                          'Available',
+                          widget.vehicle.availabilityStatus == 'Available' ? 'Available' : 'Not Available',
                           style: smallTextStyle.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+
                       ],
                     ),
                   ),
@@ -205,7 +204,7 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                     children: [
                       Expanded(
                         child: Text(
-                          widget.name,
+                          widget.vehicle.name ?? 'Unknown',
                           style: mediumTextStyle.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -228,7 +227,7 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                             ),
                             SizedBox(width: 4.w),
                             Text(
-                              '5.00',
+                              widget.vehicle.averageRating.toString(),
                               style: smallTextStyle.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: Colors.green,
@@ -246,9 +245,9 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSpecItem(Icons.person_outline, '4 Seats'),
-                      _buildSpecItem(Icons.local_gas_station_outlined, 'Petrol'),
-                      _buildSpecItem(Icons.speed_outlined, 'Auto'),
+                      _buildSpecItem(Icons.person_outline, widget.vehicle.seats.toString()),
+                      _buildSpecItem(Icons.local_gas_station_outlined, widget.vehicle.fuelType ?? ''),
+                      _buildSpecItem(Icons.speed_outlined, widget.vehicle.enginecc.toString()),
                      
                     ],
                   ),
@@ -260,12 +259,13 @@ class _VehicleSmallCardState extends State<VehicleSmallCard> with SingleTickerPr
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                         child: Text(
-                          '\$${widget.price}/h',
+                          '\₹${widget.vehicle.dailyRate}/day',
                           style: extraSmallTextStyle.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
+
                       ),
                 ],
               ),

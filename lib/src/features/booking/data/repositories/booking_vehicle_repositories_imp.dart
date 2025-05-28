@@ -35,9 +35,11 @@ class BookingVehicleRepositoriesImpl implements VehicleRepositories {
         vendorId: bookingData.vendorId,
         paymentType: bookingData.paymentType,
         isDeliveryAtHome: bookingData.isDeliveryAtHome,
+        addressId: bookingData.addressId,
       );
       final result = await dataSource.postBooking(bookingDataModel);
       return Right(result);
+
     } catch (e) {
       return Left(Failure(e.toString()));
     }
@@ -54,8 +56,15 @@ class BookingVehicleRepositoriesImpl implements VehicleRepositories {
       paymentType: bookingData.paymentType,
       vendorId: bookingData.vendorId,
       isDeliveryAtHome: bookingData.isDeliveryAtHome,
+      addressId: bookingData.addressId,
+
     );
     final result = await dataSource.checkAvailability(bookingDataModel);
+    return Right(result);
+  }
+  @override
+  Future<Either<Failure, BookingVehicle>> getBookingVehicleById(String id) async {
+    final result = await dataSource.getBookingVehicleById(id);
     return Right(result);
   }
 }
